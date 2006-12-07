@@ -1,34 +1,46 @@
-function hmm = trainhmmhtk(trdata, nstates, niter, verb, CVPRIOR, mu0, name);
-% hmmparams = trainhmmhtk(trdata, nstates, niter, verb, cvprior);
+function hmm = train_hmm_htk(trdata, hmm, niter, verb, CVPRIOR);
+% hmmparams = train_hmm_htk(trdata, hmm_template, niter, verb, cvprior);
 %
-%  Train a fully-connected (ergodic) Hidden Markov Model with Gaussian
-%  emissions (diagonal covariance) using HTK.
+%  Train a Hidden Markov Model using HTK.  hmm_template defines the
+%  initial HMM parameters (number of states, emission type, initial
+%  transition matrix...).  
+%
+%  Note that as of 2006-12-07 GMM support is completely untested
 %
 % Inputs:
 % trdata  - training data (cell array of training sequences, each
 %                          column of the sequences arrays contains a
 %                          data point in the time series)
-% nstates - number of states
-% niter   - number of EM iterations to perform
+% hmm_template - structure defining the initial HMM parameters:
+%        .nstates       -  number of states.  Defaults to 2
+%        .emission_type - 'gaussian' or 'GMM'.  Defaults to
+%                         'gaussian'
+%        .transmat      - initial transition matrix (log
+%                          probabilities).  Defaults to fully
+%                          connected 
+% niter   - number of EM iterations to perform.  Defaults to 10
 % verb    - set to 1 to output loglik at each iteration
 %
 % Outputs:
-% hmmparams - structure containing hmm parameters learned from training
-%             data (hmm.priors, hmm.transmat, hmm.mu(:,1:nstates), 
-%             hmm.covar(:,1:nstates))
+% hmmparams - structure containing hmm parameters learned from the training
+%             data 
 %
 % 2006-06-16 ronw@ee.columbia.edu
 
+HRest_path = '~drspeech/opt/htk/bin.linux/HRest';
+
+DEFAULT_NMIX = 2;
+
+if nargin < 2
+  hmm.nstates = 2;
+end
+
 if nargin < 3
-  niter = 20;
+  niter = 10;
 end
 
 if nargin < 4
   verb = 0;
-end
-
-if ~iscell(trdata)
-  trdata = {trdata};
 end
 
 % prior on observation covariances to avoid overfitting:
@@ -36,63 +48,62 @@ if nargin < 5
   CVPRIOR = 1;
 end
 
-if nargin < 6
-  mu0 = [];
-end
 
-if nargin >= 7
-  hmm.name = name;
+if ~iscell(trdata)
+  trdata = {trdata};
 end
-
 nseq = length(trdata);
 [ndim, nobs(1)] = size(trdata{1});
-
-% initial HMM parameters
-hmm.transmat = log(ones(nstates)/nstates);
-hmm.priors = log(ones(1, nstates)/nstates);
-obsmean = mean(trdata{1},2);
 
 % HInit support is currently broken
 use_hinit = 0;
 
-if nargin < 6 | numel(mu0) == 1 & mu0 == 1
+
+% default hmm parameters
+nstates = hmm_template.nstates;
+if ~isfield(hmm, 'emission_type')
+  hmm.emission_type = 'gaussian';
+end
+if ~isfield(hmm, 'transmat')
+  hmm.transmat = log(ones(nstates)/nstates);
+end
+if ~isfield(hmm, 'start_prob')
+  hmm.start_prob = log(ones(1, nstates)/nstates);
+end
+if ~isfield(hmm, 'end_prob')
+  hmm.end_prob = log(ones(1, nstates)/nstates);
+end
+if strcmp(hmm.emission_type, 'gaussian') & ~isfield(hmm, 'means')
   % init using k-means:
   kmeansiter = round(.1*niter)+1;
   rp = randperm(nobs(1));
   % in case there aren't enough observations...
   rp = repmat(rp,1,ceil(nstates/nobs(1)));
-  hmm.mu = trdata{1}(:,rp(1:nstates));
+  hmm.means = trdata{1}(:,rp(1:nstates));
   for i = 1:kmeansiter
     % ||x-y || = x^Tx -2x^Ty + y^Ty
     % x^Tx = repmat(sum(x.^2),xc,1);
     % y^Ty = repmat(sum(y.^2),yc,1);
-    D = repmat(sum(trdata{1}.^2,1)',1,nstates) - 2*trdata{1}'*hmm.mu ...
-        + repmat(sum(hmm.mu.^2,1),nobs(1),1);
+    D = repmat(sum(trdata{1}.^2,1)',1,nstates) - 2*trdata{1}'*hmm.means ...
+        + repmat(sum(hmm.means.^2,1),nobs(1),1);
     
     %assign each data point to one of the clusters
     [tmp idx] = min(D,[],2);
     
     for k = 1:nstates
       if sum(idx == k) > 0
-        hmm.mu(:,k) = mean(trdata{1}(:,idx == k),2);
+        hmm.means(:,k) = mean(trdata{1}(:,idx == k),2);
       end
     end
   end
-  
-  % keep similar states close together
-  x = ordercols(hmm.mu);
-  hmm.mu = hmm.mu(:,x);
-else
-  if size(mu0, 2) == nstates
-    hmm.mu = mu0;
-  end
+end
+if strcmp(hmm.emission_type, 'gaussian') & ~isfield(hmm, 'covars')
+  hmm.covars = ones(ndim, nstates);
+end
+if strcmp(hmm.emission_type, 'GMM') & ~isfield(hmm, 'gmms')
+  [hmm.gmms{1:nstates}] = deal(default_gmm);
 end
 
-if numel(mu0) == 1
-    use_hinit = mu0;
-end
-
-hmm.covar = ones(ndim, nstates);
 
 % write temp files for each sequence
 
@@ -110,7 +121,7 @@ end
 
 % initial HTK HMM: HInit/HCompV? 
 hmmfilename = ['/tmp/matlabtmp_htkhmm_' rnd];
-writehtkhmm(hmmfilename, hmm); 
+write_htk_hmm(hmmfilename, hmm); 
 
 if use_hinit
   args = ['-i ' num2str(niter) ' -v ' num2str(CVPRIOR)];
@@ -135,23 +146,14 @@ if verb
   end
 end
 
-system(['HRest ' args ' ' hmmfilename ' ' sprintf('%s ', datafilename{:})]);
+system([HRest_path ' ' args ' ' hmmfilename ' ' sprintf('%s ', datafilename{:})]);
 
 if verb
   disp(['******** DONE ********'])
 end
 
 % read in hmm:
-hmm = readhtkhmm(hmmfilename, 1);
-
-%type(hmmfilename)
-
-
-% make sure this can be used as GMM as well
-gmm = traingmm(cat(2, trdata{:}), nstates, 1, CVPRIOR, 1, 1, hmm.mu, 0, ...
-    hmm.covar, 0);
-hmm.mix = gmm.mix;
-
+hmm = read_htk_hmm(hmmfilename, 1);
 
 % clean up:
 system(['rm ' hmmfilename]);

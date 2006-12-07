@@ -1,27 +1,11 @@
-function hmms = readhtkhmm(filename, include_exit_state, priors_in_transmat);
-% hmm = readhtkhmm(filename, include_exit_state, priors_in_transmat)
+function hmms = read_htk_hmm(filename)
+% hmm = read_htk_hmm(filename)
 %
 % Reads in an HTK HMM definition file.  Only works on text files.
 % At the moment this only works for Gaussian emissions with
 % diagonal covariance.
 %
-% This function makes a some assumptions about the HTK HMM its reading
-% in.  It assumes that the last state in each HMM is a non-emitting
-% exit state.
-%
-% If include_exit_state == 1, the transition matrix of the returned
-% hmms will have an extra column at the end which includes the
-% probability that the HMM transitions to a non-emitting exit state.
-%
 % 2006-06-09 ronw@ee.columbia.edu
-
-if nargin < 2
-  %include_exit_state = 1;
-  include_exit_state = 0;
-end
-if nargin < 3
-  priors_in_transmat = 0;
-end
 
 % Read the M-file into a cell array of strings: 
 [fid, message] = fopen(filename, 'rt');
@@ -47,7 +31,7 @@ for x = 1:length(file)
   if ~lastlinewashmm 
     if length(file{x}) >= 2 
       if file{x}(1:2) == '~h' | ~isempty(strmatch(upper(file{x}), '<BEGINHMM>'))
-        hmms(nhmms) = readNextHMM(file, x, include_exit_state, priors_in_transmat);
+        hmms(nhmms) = readNextHMM(file, x);
         nhmms = nhmms+1;
         lastlinewashmm = 1;
       end
@@ -59,7 +43,7 @@ end
 
 
 %%%%%%%%%%
-function hmm = readNextHMM(file, linenum, include_exit_state, priors_in_transmat)
+function hmm = readNextHMM(file, linenum)
 
 x = linenum;
 if ~isempty(findstr(file{x}, '~h'))
@@ -71,8 +55,8 @@ else
 end
 
 x = x + 1;
-hmm.nstates = strread(upper(file{x}), '<NUMSTATES> %d');
-hmm.num_emitting_states = hmm.nstates-include_exit_state-priors_in_transmat;
+% first and last state in 
+hmm.nstates = strread(upper(file{x}), '<NUMSTATES> %d')-2;
 
 x = x + 1;
 while isempty(findstr(upper(file{x}),'<TRANSP>'))
@@ -114,19 +98,16 @@ while isempty(findstr(upper(file{x}),'<TRANSP>'))
 
     if nmix == 1
       % Gaussian emissions
-      %hmm.mix(state) = prior;
-      %hmm.priors(state) = prior;
-      hmm.mu(:, state) = mu;
-      hmm.covar(:, state) = covar;
-      %hmm.gconst(state) = gconst;
+      hmm.emission_type = 'gaussian';
+      hmm.means(:, state) = mu;
+      hmm.covars(:, state) = covar;
     else 
       % GMM emissions
-      hmm.gmm{state}.mix(currmix) = prior;
-      %hmm.gmm{state}.priors(currmix) = prior;
-      hmm.gmm{state}.nmix = nmix;
-      hmm.gmm{state}.mu(:, currmix) = mu;
-      hmm.gmm{state}.covar(:, currmix) = covar;
-      %hmm.gmm_gconst{state}(currmix) = gconst; 
+      hmm.emission_type = 'GMM';
+      hmm.gmms{state}.priors(currmix) = prior;
+      hmm.gmms{state}.nmix = nmix;
+      hmm.gmms{state}.means(:, currmix) = mu;
+      hmm.gmms{state}.covars(:, currmix) = covar;
     end
   end
 end  
@@ -134,33 +115,17 @@ end
 nstates = strread(upper(file{x}), '<TRANSP> %d'); 
 x = x+1;
 
-if ~include_exit_state
-  nstates = nstates-1;
-end
-
-  tmp = strread(file{x}, '%f', nstates);
-  hmm.priors = log(tmp(2:nstates)'+eps);
-  hmm.mix = hmm.priors;
-
-if ~priors_in_transmat
-  x = x+1;
-  start = 2;
-else
-  nstates = nstates + 1;
-  start = 1;
-end
-
-for n = start:nstates
-  tmp = strread(file{x}, '%f', nstates);
-  if include_exit_state 
-    transmat(n-1,:) = tmp(2:end);
-  else
-    transmat(n-1,:) = tmp(2:end-1);
-  end
+transmat = zeros(nstates);
+for n = 1:nstates
+  transmat(n,:) = strread(file{x}, '%f', nstates);
   x = x+1;
 end
-hmm.transmat = log(transmat+eps);
 
-if include_exit_state
-  hmm.last_state_is_exit_state = 1;
+w = warning('query', 'MATLAB:log:logOfZero');
+if strcmp(w.state, 'on')
+  warning('off', 'MATLAB:log:logOfZero');
 end
+hmm.start_prob = log(transmat(1,2:end-1));
+hmm.transmat = log(transmat(2:end-1,2:end-1));
+hmm.end_prob = log(transmat(2:end-1,end));
+warning(w.state, w.identifier);

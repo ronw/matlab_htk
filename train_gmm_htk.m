@@ -1,5 +1,5 @@
-function gmm = traingmmhtk(trdata, nmix, niter, verb, CVPRIOR, mu0);
-% gmmparams = traingmmhtk(trdata, nmix, niter, verb, cvprior, mu0);
+function gmm = train_gmm_htk(trdata, nmix, niter, verb, CVPRIOR, mu0);
+% gmmparams = train_gmm_htk(trdata, nmix, niter, verb, cvprior, mu0);
 %
 % Train a GMM with diagonal covariance using HTK.
 %
@@ -13,10 +13,12 @@ function gmm = traingmmhtk(trdata, nmix, niter, verb, CVPRIOR, mu0);
 %
 % Outputs:
 % gmmparams - structure containing hmm parameters learned from training
-%             data (gmm.mix, gmm.mu(:,1:nmix), gmm.covar(:,1:nmix))
+%             data (gmm.priors, gmm.means(:,1:nmix), gmm.covars(:,1:nmix))
 %
 % 2006-12-06 ronw@ee.columbia.edu
 
+
+HRest_path = '~drspeech/opt/htk/bin.linux/HRest';
 
 % based on trainhmmhtk.m
 
@@ -28,24 +30,35 @@ if nargin < 4
   verb = 0;
 end
 
-if ~iscell(trdata)
-  trdata = {trdata};
-end
-
 % prior on observation covariances to avoid overfitting:
 if nargin < 5
   CVPRIOR = 1;
 end
 
+if ~iscell(trdata)
+  trdata = {trdata};
+end
+
+% HRest complains bitterly if there are fewer than 3 training
+% sequence, but since we are training a gmm we can cheat and steal
+% the last two columns of trdata{1} and treat them as separate
+% training sequences.
 nseq = length(trdata);
+if nseq < 3
+  tmp = trdata{1};
+  trdata{1} = tmp(:,1:end-2);
+  trdata{nseq+1} = tmp(:,end-1);
+  trdata{nseq+2} = tmp(:,end);
+  nseq = nseq + 2;
+end
 [ndim, nobs(1)] = size(trdata{1});
 
 % initial HMM parameters
-hmm.transmat = 0;
-hmm.priors = 0;
+hmm.transmat = 1;
+hmm.priors = 1;
 obsmean = mean(trdata{1},2);
 % uniform prior
-gmm.mix = ones(1, nmix)/nmix;
+gmm.priors = log(ones(1, nmix)/nmix);
 gmm.nmix = nmix;
 
 if nargin < 6 | numel(mu0) == 1 & mu0 == 1
@@ -54,40 +67,35 @@ if nargin < 6 | numel(mu0) == 1 & mu0 == 1
   rp = randperm(nobs(1));
   % in case there aren't enough observations...
   rp = repmat(rp,1,ceil(nmix/nobs(1)));
-  gmm.mu = trdata{1}(:,rp(1:nmix));
+  gmm.means = trdata{1}(:,rp(1:nmix));
   for i = 1:kmeansiter
     % ||x-y || = x^Tx -2x^Ty + y^Ty
     % x^Tx = repmat(sum(x.^2),xc,1);
     % y^Ty = repmat(sum(y.^2),yc,1);
-    D = repmat(sum(trdata{1}.^2,1)',1,nmix) - 2*trdata{1}'*gmm.mu ...
-        + repmat(sum(gmm.mu.^2,1),nobs(1),1);
+    D = repmat(sum(trdata{1}.^2,1)',1,nmix) - 2*trdata{1}'*gmm.means ...
+        + repmat(sum(gmm.means.^2,1),nobs(1),1);
     
     %assign each data point to one of the clusters
     [tmp idx] = min(D,[],2);
     
     for k = 1:nmix
       if sum(idx == k) > 0
-        gmm.mu(:,k) = mean(trdata{1}(:,idx == k),2);
+        gmm.means(:,k) = mean(trdata{1}(:,idx == k),2);
       end
     end
   end
-  
-  % keep similar states close together
-  x = ordercols(gmm.mu);
-  gmm.mu = gmm.mu(:,x);
 else
   if size(mu0, 2) == nmix
-    gmm.mu = mu0;
+    gmm.means = mu0;
   end
 end
 
-gmm.covar = ones(ndim, nmix);
-hmm.gmm = {gmm};
+gmm.covars = ones(ndim, nmix);
+hmm.gmms = {gmm};
 
 % write temp files for each sequence
 
 % Temporary file to use
-rnd = num2str(round(1000*rand(1)));
 for n = 1:length(trdata)
   datafilename{n} = ['/tmp/matlabtmp_htkdat_' rnd '_' num2str(n) ...
         '.dat']; 
@@ -100,7 +108,7 @@ end
 
 % initial HTK HMM: HInit/HCompV? 
 hmmfilename = ['/tmp/matlabtmp_htkhmm_' rnd];
-writehtkhmm(hmmfilename, hmm); 
+write_htk_hmm(hmmfilename, hmm); 
 use_hinit = 0;
 if use_hinit
   args = ['-i ' num2str(niter) ' -v ' num2str(CVPRIOR)];
@@ -116,7 +124,6 @@ if use_hinit
 end 
 
 % run HRest to train:
-%system(['HRest -A -D -T 1777 -t ' hmmfilename ' ' sprintf('%s ', datafilename{:})]);
 args = ['-t -M /tmp -i ' num2str(niter) ' -v ' num2str(CVPRIOR)];
 if verb
   args = [args ' -T 3'];
@@ -124,16 +131,15 @@ if verb
     args = [args ' -A -V -D'];
   end
 end
-
-system(['HRest ' args ' ' hmmfilename ' ' sprintf('%s ', datafilename{:})]);
+system([HRest_path ' ' args ' ' hmmfilename ' ' sprintf('%s ', datafilename{:})]);
 
 if verb
   disp(['******** DONE ********'])
 end
 
 % read in hmm:
-hmm = readhtkhmm(hmmfilename);
-gmm = hmm.gmm{1};
+hmm = read_htk_hmm(hmmfilename);
+gmm = hmm.gmms{1};
 
 % clean up:
 system(['rm ' hmmfilename]);
