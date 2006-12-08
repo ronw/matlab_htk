@@ -27,10 +27,6 @@ function hmm = train_hmm_htk(trdata, hmm, niter, verb, CVPRIOR);
 %
 % 2006-06-16 ronw@ee.columbia.edu
 
-HRest_path = '~drspeech/opt/htk/bin.linux/HRest';
-
-DEFAULT_NMIX = 2;
-
 if nargin < 2
   hmm.nstates = 2;
 end
@@ -60,7 +56,7 @@ use_hinit = 0;
 
 
 % default hmm parameters
-nstates = hmm_template.nstates;
+nstates = hmm.nstates;
 if ~isfield(hmm, 'emission_type')
   hmm.emission_type = 'gaussian';
 end
@@ -72,43 +68,61 @@ if ~isfield(hmm, 'start_prob')
 end
 if ~isfield(hmm, 'end_prob')
   hmm.end_prob = log(ones(1, nstates)/nstates);
+
+  % normalize transmat and end_prob properly
+  if size(hmm.end_prob, 2) == 1
+    hmm.end_prob = hmm.end_prob';
+  end
+  norm = log(exp(logsum(hmm.transmat, 2)) + exp(hmm.end_prob'));
+  hmm.transmat = hmm.transmat - repmat(norm, 1, nstates);
+  hmm.end_prob = hmm.end_prob - norm';
 end
-if strcmp(hmm.emission_type, 'gaussian') & ~isfield(hmm, 'means')
-  % init using k-means:
-  kmeansiter = round(.1*niter)+1;
-  rp = randperm(nobs(1));
-  % in case there aren't enough observations...
-  rp = repmat(rp,1,ceil(nstates/nobs(1)));
-  hmm.means = trdata{1}(:,rp(1:nstates));
-  for i = 1:kmeansiter
-    % ||x-y || = x^Tx -2x^Ty + y^Ty
-    % x^Tx = repmat(sum(x.^2),xc,1);
-    % y^Ty = repmat(sum(y.^2),yc,1);
-    D = repmat(sum(trdata{1}.^2,1)',1,nstates) - 2*trdata{1}'*hmm.means ...
-        + repmat(sum(hmm.means.^2,1),nobs(1),1);
-    
-    %assign each data point to one of the clusters
-    [tmp idx] = min(D,[],2);
-    
-    for k = 1:nstates
-      if sum(idx == k) > 0
-        hmm.means(:,k) = mean(trdata{1}(:,idx == k),2);
-      end
-    end
+if strcmp(hmm.emission_type, 'gaussian') 
+  if ~isfield(hmm, 'means')
+    % init using k-means:
+    hmm.means = kmeans(cat(2, trdata{:}), nstates, niter/2);
+  end
+  if ~isfield(hmm, 'covars')
+    hmm.covars = ones(ndim, nstates);
   end
 end
-if strcmp(hmm.emission_type, 'gaussian') & ~isfield(hmm, 'covars')
-  hmm.covars = ones(ndim, nstates);
-end
-if strcmp(hmm.emission_type, 'GMM') & ~isfield(hmm, 'gmms')
-  [hmm.gmms{1:nstates}] = deal(default_gmm);
+if strcmp(hmm.emission_type, 'GMM') 
+  if ~isfield(hmm, 'gmms')
+    hmm.gmms = cell(nstates);
+  end
+  if ~isfield(hmm.gmms{1}, 'nmix')
+    nmix = 3;
+    for x = 1:nstates
+      hmm.gmms{x}.nmix = nmix;
+    end
+  else
+    nmix = hmm.gmms{1}.nmix;
+  end
+  if ~isfield(hmm.gmms{1}, 'priors')
+    priors = log(ones(1, nmix)/nmix);
+    for x = 1:nstates
+      hmm.gmms{x}.priors = priors;
+    end
+  end
+  if ~isfield(hmm.gmms{1}, 'means')
+    means = kmeans(cat(2, trdata{:}), nmix, niter/2);
+    for x = 1:nstates
+      hmm.gmms{x}.means = means;
+    end
+  end
+  if ~isfield(hmm.gmms{1}, 'covars')
+    covars = ones(ndim, nmix);
+    for x = 1:nstates
+      hmm.gmms{x}.covars = covars;
+    end
+  end
 end
 
 
 % write temp files for each sequence
 
 % Temporary file to use
-rnd = num2str(round(1000*rand(1)));
+rnd = num2str(round(10000*rand(1)));
 for n = 1:length(trdata)
   datafilename{n} = ['/tmp/matlabtmp_htkdat_' rnd '_' num2str(n) ...
         '.dat']; 
@@ -146,14 +160,14 @@ if verb
   end
 end
 
-system([HRest_path ' ' args ' ' hmmfilename ' ' sprintf('%s ', datafilename{:})]);
+system([get_htk_path 'HRest ' args ' ' hmmfilename ' ' sprintf('%s ', datafilename{:})]);
 
 if verb
   disp(['******** DONE ********'])
 end
 
 % read in hmm:
-hmm = read_htk_hmm(hmmfilename, 1);
+hmm = read_htk_hmm(hmmfilename);
 
 % clean up:
 system(['rm ' hmmfilename]);

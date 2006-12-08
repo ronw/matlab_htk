@@ -7,8 +7,8 @@ function gmm = train_gmm_htk(trdata, nmix, niter, verb, CVPRIOR, mu0);
 % trdata - training data (cell array of training sequences, each
 %                         column of the sequences arrays contains ana
 %                         observation)
-% nmix   - number of mixture components
-% niter  - number of EM iterations to perform
+% nmix   - number of mixture components.  Defaults to 3.
+% niter  - number of EM iterations to perform.  Defaults to 10.
 % verb   - set to 1 to output loglik at each iteration
 %
 % Outputs:
@@ -18,12 +18,12 @@ function gmm = train_gmm_htk(trdata, nmix, niter, verb, CVPRIOR, mu0);
 % 2006-12-06 ronw@ee.columbia.edu
 
 
-HRest_path = '~drspeech/opt/htk/bin.linux/HRest';
-
 % based on trainhmmhtk.m
-
+if nargin < 2
+  nmix = 3;
+end
 if nargin < 3
-  niter = 20;
+  niter = 10;
 end
 
 if nargin < 4
@@ -53,37 +53,19 @@ if nseq < 3
 end
 [ndim, nobs(1)] = size(trdata{1});
 
-% initial HMM parameters
-hmm.transmat = 1;
-hmm.priors = 1;
-obsmean = mean(trdata{1},2);
+% initial HMM parameters - only 1 state since we're learning a GMM.
+hmm.emission_type = 'GMM';
+hmm.nstates = 1;
+hmm.transmat = log(0.9);
+hmm.start_prob = 0;
+hmm.end_prob = log(0.1);
+
 % uniform prior
 gmm.priors = log(ones(1, nmix)/nmix);
 gmm.nmix = nmix;
 
 if nargin < 6 | numel(mu0) == 1 & mu0 == 1
-  % init using k-means:
-  kmeansiter = round(.1*niter)+1;
-  rp = randperm(nobs(1));
-  % in case there aren't enough observations...
-  rp = repmat(rp,1,ceil(nmix/nobs(1)));
-  gmm.means = trdata{1}(:,rp(1:nmix));
-  for i = 1:kmeansiter
-    % ||x-y || = x^Tx -2x^Ty + y^Ty
-    % x^Tx = repmat(sum(x.^2),xc,1);
-    % y^Ty = repmat(sum(y.^2),yc,1);
-    D = repmat(sum(trdata{1}.^2,1)',1,nmix) - 2*trdata{1}'*gmm.means ...
-        + repmat(sum(gmm.means.^2,1),nobs(1),1);
-    
-    %assign each data point to one of the clusters
-    [tmp idx] = min(D,[],2);
-    
-    for k = 1:nmix
-      if sum(idx == k) > 0
-        gmm.means(:,k) = mean(trdata{1}(:,idx == k),2);
-      end
-    end
-  end
+  gmm.means = kmeans(cat(2, trdata{:}), nmix, niter/2);
 else
   if size(mu0, 2) == nmix
     gmm.means = mu0;
@@ -96,6 +78,7 @@ hmm.gmms = {gmm};
 % write temp files for each sequence
 
 % Temporary file to use
+rnd = num2str(round(10000*rand(1)));
 for n = 1:length(trdata)
   datafilename{n} = ['/tmp/matlabtmp_htkdat_' rnd '_' num2str(n) ...
         '.dat']; 
@@ -131,7 +114,7 @@ if verb
     args = [args ' -A -V -D'];
   end
 end
-system([HRest_path ' ' args ' ' hmmfilename ' ' sprintf('%s ', datafilename{:})]);
+system([get_htk_path() 'HRest ' args ' ' hmmfilename ' ' sprintf('%s ', datafilename{:})]);
 
 if verb
   disp(['******** DONE ********'])

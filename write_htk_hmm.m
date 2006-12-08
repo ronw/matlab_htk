@@ -15,7 +15,7 @@ nstates = length(hmm.transmat);
 if strcmp(hmm.emission_type, 'gaussian')
   ndim = size(hmm.means, 1);
 else
-  gmm = hmm.gmm{1};
+  gmm = hmm.gmms{1};
   ndim = size(gmm.means, 1);
 end
 
@@ -65,11 +65,15 @@ end
 % transmat
 fprintf(fid, '  <TransP> %d\n', nstates+2);
 
+end_prob = exp(hmm.end_prob);
+if size(end_prob, 1) == 1
+  end_prob = end_prob';
+end
 % the first state is non emitting
 transmat = [0, exp(hmm.start_prob), 0; ...
-           zeros(nstates, 1), exp(hmm.transmat), zeros(nstates,1); ...
+           zeros(nstates, 1), exp(hmm.transmat), end_prob; ...
 % the last state is also non emitting
-           0, exp(hmm.end_prob), 0];
+           zeros(1, nstates+2)];
 
 for n = 1:nstates+2
   fprintf(fid, ' %f', transmat(n,:));
@@ -79,4 +83,3 @@ end
 fprintf(fid, '<EndHMM>');
 
 fclose(fid);
-5B

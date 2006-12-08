@@ -104,7 +104,7 @@ while isempty(findstr(upper(file{x}),'<TRANSP>'))
     else 
       % GMM emissions
       hmm.emission_type = 'GMM';
-      hmm.gmms{state}.priors(currmix) = prior;
+      hmm.gmms{state}.priors(currmix) = log(prior);
       hmm.gmms{state}.nmix = nmix;
       hmm.gmms{state}.means(:, currmix) = mu;
       hmm.gmms{state}.covars(:, currmix) = covar;

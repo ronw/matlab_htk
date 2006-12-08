@@ -1,10 +1,12 @@
-Unforuntately this has not been very thoroughly tested, *but* it has
+This package contains a set of functions for calling interfacing with
+HTK from Matlab.  Right now its mostly limited to training GMMs and
+HMMs.  It converts your Matlab data into a format that HTK understands
+and calls HTK command line programs.  The path to the HTK binaries is
+hardcoded in get_htk_path.m
+
+Unforuntately this has not been very thoroughly tested, but it has
 been working for me.  If anyone wants to write some unit tests using
 http://mlunit.sf.net or something similar I won't say no.
-
-In addition to whats listed here, I have some (matlab only and matlab
-+ C) code to do a Viterbi decode of a factorial HMM.  Is anyone
-interested in this?
 
 
 * Functions
@@ -19,10 +21,17 @@ They are all reasonably commented...
  - Utility functions:
    - read_htk_hmm  - read in an HTK HMM definition (text format only)
    - write_htk_hmm - write an HMM structure as an HTK HMM definition
+   - htkwrite.m    - write a Matlab matrix in HTK feature file format
+                     (borrowed from Mark Hasegawa-Johnson courtesy of
+                     the The InterWeb (TM))
    - compose_hmms  - does FSM composition to form a big HMM from many
                      small HMMs (i.e. get an HMM to recognize a
                      sentence from a bunch of phone HMMs).
-
+   - kmeans        - uses kmeans to learn clusters from data.  used to
+                     initialize GMMs and HMMs.
+   - logsum        - takes the sum of a matrix of log likelihoods
+   - get_htk_path  - centralized location to set the path to HTK
+                     binaries
  
 * Data Structures
 
