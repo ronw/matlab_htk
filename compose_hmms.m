@@ -86,4 +86,5 @@ norm = log(exp(logsum(hmm.transmat, 2)) + exp(hmm.end_prob'));
 hmm.transmat = hmm.transmat - repmat(norm, 1, nstates);
 hmm.end_prob = hmm.end_prob - norm';
 
+% turn warnings back on 
 warning(w.state, w.identifier);
