@@ -1,8 +1,9 @@
 function hmm = compose_hmms(hmms, meta_hmm)
 % hmm = compose_hmms(hmms, meta_hmm)
 %
-% Take a list of HMMs and a meta_hmm explaining how the HMMs in
-% the list are stiched together and create one big FSM HMM from it.
+% Takes an array of HMM structures and a meta_hmm explaining how the
+% HMMs in the list are stiched together and create one big FSM HMM
+% from it.
 %
 % meta_hmm should have length(hmms) states.  Each state in meta_hmm
 % should have a label corresponding to the name of one HMM in hmms.
@@ -38,10 +39,16 @@ hmm = struct('name', meta_hmm.name, ...
     'start_prob', zeros(1, nstates) - Inf, ...
     'end_prob', zeros(1, nstates) - Inf, ...
     'transmat', zeros(nstates) - Inf);
-if isfield(hmms(1), 'labels')
-  hmm.labels = cat(2, hmms.labels);
+
+curr_state = 1;
+for n = 1:nhmms
+  [hmm.labels{curr_state:curr_state+hmms(n).nstates}] = ...
+      deal(hmms(n).name);
+  curr_state = curr_state + hmms(n).nstates;
 end
-if strcmp(hmms(1).emission_type, 'gaussian')
+
+hmm.emission_type = hmms(1).emission_type;
+if strcmp(hmm.emission_type, 'gaussian')
   hmm.means = cat(2, hmms.means);
   hmm.covars = cat(2, hmms.covars);
 else
@@ -60,13 +67,10 @@ for x = 1:nhmms
 
     source_prob = exp(hmms(x).end_prob);
     dest_prob = exp(hmms(x).start_prob);
+
     % make sure we have column vectors
-    if size(source_prob, 1) == 1
-      source_prob = source_prob';
-    end
-    if size(dest_prob, 1) == 1
-      dest_prob = dest_prob';
-    end
+    source_prob = source_prob(:);
+    dest_prob = dest_prob(:);
 
     hmm.transmat(source_idx, dest_idx) = ...
         log(source_prob * dest_prob') ...

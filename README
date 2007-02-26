@@ -55,7 +55,7 @@ Note: all probabilities are stored as log probabilities
                         = log(P(transition from state x to state y)))
   - hmm.labels        - optional cell array of labels for each state in the HMM
                         (for use in composing HMMs)
-  - hmm.gmms          - cell array of GMMs 
+  - hmm.gmms          - array of GMM structures 
 
 ** HMM with Gaussian observations
   - hmm.nstates       - number of states in the HMM

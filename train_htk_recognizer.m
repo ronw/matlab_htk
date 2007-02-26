@@ -26,10 +26,11 @@ function htk_recognizer = train_htk_recognizer(traindat, word_list, word_grammar
 % Outputs:
 %  - recognizer - structure containing the components of an hmm
 %                 recognizer:
-%                   recog.hmms    - cell array of HMMs
+%                   recog.hmms       - cell array of HMMs
 %                   recog.grammar
-%                   recog.wordnet - 
-%                   recog.wordlist - 
+%                   recog.word_list
+%                   recog.phone_list  
+%                   recog.dict
 %
 % 2006-11-27 ronw@ee.columbia.edu
 
@@ -45,7 +46,6 @@ if iscell(traindat)
 end
 
 if nargin < 6
-
   % FIXME - this is broken if traindat_contains_data is false
   [ndim, ndat] = size(traindat{1});
 
@@ -82,35 +82,30 @@ filename_prefix = [base_dir 'htk'];
 
 if isstruct(word_grammar)
   grammar_filename = [filename_prefix '.grammar'];
-  write_htk_slf(grammar_filename, word_grammar);
+  write_htk_bnf(grammar_filename, word_grammar);
+elseif iscellstr(word_grammar)
+  grammar_filename = [filename_prefix '.grammar'];
+  write_text_file(grammar_filename, word_grammar);
 else
   grammar_filename = word_grammar;
+  word_grammar = read_text_file(grammar_filename);
 end
 
 % dictionary
-if iscell(phone_dict)
-  phone_dict = strvcat(phone_dict);
+if iscellstr(phone_dict)
   phone_dict_filename = [filename_prefix '.dict'];
-  fid = fopen(phone_dict_filename, 'w');
-  fprintf(fid, '%s\n', phone_dict);
-  fclose(fid);
+  write_text_file(phone_dict_filename, phone_dict);
 else
   phone_dict_filename = phone_dict;
 end
 
 % write word list
-if iscell(word_list)
+if iscellstr(word_list)
   word_list_filename = [filename_prefix '.wordlist'];
-  fid = fopen(word_list_filename,'w');
-  fprintf(fid, '%s\n', strvcat(word_list));
-  fclose(fid);
+  write_text_file(word_list_filename, word_list);
 else
   word_list_filename = word_list;
-
-  fid = fopen(word_list_filename, 'r');
-  word_list = textscan(fid, '%s', 'delimiter', '\n', 'whitespace', '', 'bufSize', 16000);
-  fclose(fid);
-  word_list = word_list{1};
+  word_list = read_text_file(word_list_filename);
 end
 
 % write out training data...
@@ -124,7 +119,6 @@ if traindat_contains_data
     
     % custom data format:
     htkcode = 9;  % USER
-    %htkcode = 6;  % MFCC
     htkwrite(traindat{n}', traindat_filenames{n}, htkcode);
   end
 else
@@ -133,11 +127,7 @@ else
   else
     % traindat should contain the name of an HTK .scp file with a list
     % of training data filenames
-
-    fid = fopen(traindat, 'r');
-    tmp = textscan(fid, '%s', 'delimiter', '\n', 'whitespace', '', 'bufSize', 16000);
-    fclose(fid);
-    traindat_filenames = tmp{1};
+    traindat_filenames = read_text_file(traindat);
   end
 end
 
@@ -147,15 +137,10 @@ traindat_featfile = traindat_filenames;
 
 % write .scp file (tells htk where to find feature files)
 featfiles = [base_dir 'trainfiles.scp'];
-fid = fopen(featfiles, 'w');
-for n = 1:length(traindat_featfile)
-  fprintf(fid, '%s\n', traindat_featfile{n});
-end
-fclose(fid);
-
+write_text_file(featfiles, traindat_featfile);
 
 % format word transcripts ...
-if iscell(traintranscripts)
+if iscellstr(traintranscripts)
   word_trans_filename = [filename_prefix '.word_transcripts'];
   fid = fopen(word_trans_filename,'w');
   for n = 1:length(traintranscripts)
@@ -197,46 +182,10 @@ end
 %%% Output:
 htk_recognizer.hmms = read_htk_hmm([base_dir 'hmm_final/hmmdefs']);
 htk_recognizer.grammar = word_grammar;
-
+htk_recognizer.word_list = word_list;
+htk_recognizer.phone_list = read_text_file([base_dir 'monophones0']);
 % only include words in the grammar, so read the right file
-fid = fopen([base_dir 'dict'], 'r');
-dict = textscan(fid, '%s', 'delimiter', '\n', 'whitespace', '', 'bufSize', 16000);
-fclose(fid);
-htk_recognizer.dict = dict{1};
-
+htk_recognizer.dict = read_text_file([base_dir 'dict']);
 
 rmdir(base_dir, 's');
 
-% % no need for this crap anymore
-% if 0
-%   % make sure HTK understands the dictionary
-%   dict_filename = [filename_prefix '.dict'];
-%   tmp_file = [filename_prefix '.dict_tmp'];
-%   fopen(tmp_file, 'w');
-%   fprintf(fid, '%s %s', strvcat(wordlist), strvcat(phone_dict(:,2)));
-%   fclose(fid);
-%   phone_list_filename = [filename_prefix '.phones'];
-%   system(['HDMan ' OPTIONS ' -m -w ' wordlist_filename '-n' ...
-%         phone_list_filename ' -e . ' tmp_filename ' ' ...
-%         dict_filename]);
-
-%   % convert word level transcripts to phone level transcripts
-%   phone_trans_filename = [filename_prefix '.phone_transcripts'];
-%   tmp_file = [filename_prefix '.led_tmp'];
-%   fopen(tmp_file, 'w');
-%   % should we be adding a sil state here?
-%   fprintf(fid, 'EX\nIS sil sil\nDE sp');  
-%   fclose(fid)
-%   %system(['HLEd ' OPTIONS ' -l '*' -d ' dict_filename ' -i ' ...
-%   %      phone_trans_filename ' ' tmp_file ' ' word_trans_filename]);
-%   delete tmp_file;
-  
-%   % create initial HMM models from hmmtemplate
-%   hmmtemplate_filename = [filename_prefix '.hmmtemplate'];
-%   %OAwrite_htk_hmm(hmmtemplate, 
-%   hmm_filename = [filename_prefix '.hmm'];
-%   system(['HCompV' OPTIONS '-f 0.01 -m -S ' featfiles '-H ' ...
-%         hmm_filename ' ' hmmtemplate_filename]);
-% end
-  
-  

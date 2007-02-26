@@ -47,7 +47,7 @@ function hmm = readNextHMM(file, linenum)
 
 x = linenum;
 if ~isempty(findstr(file{x}, '~h'))
-  c = strread(file{linenum}, '~h %s');
+  c = strread(file{linenum}, '~h %q');
   hmm.name = c{1};
   x = x + 1;
 else
@@ -66,6 +66,9 @@ while isempty(findstr(upper(file{x}),'<TRANSP>'))
   if ~isempty(findstr(upper(file{x}), '<NUMMIXES>'))
     nmix = strread(upper(file{x}), '<NUMMIXES> %d');
     x = x+1;
+
+    hmm.gmms(state).nmix = nmix;
+    hmm.gmms(state).priors(1:nmix) = -Inf;
   else
     nmix = 1;
   end 
@@ -76,13 +79,26 @@ while isempty(findstr(upper(file{x}),'<TRANSP>'))
       break
     end
 
-    if nmix > 1 
+    if nmix > 1
+      if isempty(findstr(upper(file{x}), '<MIXTURE>'))
+        % sometimes HTK skips mixture components.  If we make sure
+        % that is a prior of -Inf, then it won't be a problem.
+        % Luckilly this is take care of in the initialization above.
+        continue
+      end
+
       [currmix, prior] = strread(upper(file{x}), '<MIXTURE> %d %f');
       x = x+1;
     end
 
     ndim = strread(upper(file{x}), '<MEAN> %d');
     x = x+1;
+
+    if n == 1 & nmix > 1
+      hmm.gmms(state).means(1:ndim,1:nmix) = 0;
+      hmm.gmms(state).covars(1:ndim,1:nmix) = 1;
+    end
+
     mu = strread(file{x}, '%f', ndim);
     x = x+1;
 
@@ -104,10 +120,10 @@ while isempty(findstr(upper(file{x}),'<TRANSP>'))
     else 
       % GMM emissions
       hmm.emission_type = 'GMM';
-      hmm.gmms{state}.priors(currmix) = log(prior);
-      hmm.gmms{state}.nmix = nmix;
-      hmm.gmms{state}.means(:, currmix) = mu;
-      hmm.gmms{state}.covars(:, currmix) = covar;
+      hmm.gmms(state).priors(currmix) = log(prior);
+      hmm.gmms(state).nmix = nmix;
+      hmm.gmms(state).means(:, currmix) = mu;
+      hmm.gmms(state).covars(:, currmix) = covar;
     end
   end
 end  

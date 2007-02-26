@@ -90,30 +90,30 @@ if strcmp(hmm.emission_type, 'GMM')
   if ~isfield(hmm, 'gmms')
     hmm.gmms = cell(nstates);
   end
-  if ~isfield(hmm.gmms{1}, 'nmix')
+  if ~isfield(hmm.gmms(1), 'nmix')
     nmix = 3;
     for x = 1:nstates
-      hmm.gmms{x}.nmix = nmix;
+      hmm.gmms(x).nmix = nmix;
     end
   else
-    nmix = hmm.gmms{1}.nmix;
+    nmix = hmm.gmms(1).nmix;
   end
-  if ~isfield(hmm.gmms{1}, 'priors')
+  if ~isfield(hmm.gmms(1), 'priors')
     priors = log(ones(1, nmix)/nmix);
     for x = 1:nstates
-      hmm.gmms{x}.priors = priors;
+      hmm.gmms(x).priors = priors;
     end
   end
-  if ~isfield(hmm.gmms{1}, 'means')
+  if ~isfield(hmm.gmms(1), 'means')
     means = kmeans(cat(2, trdata{:}), nmix, niter/2);
     for x = 1:nstates
-      hmm.gmms{x}.means = means;
+      hmm.gmms(x).means = means;
     end
   end
-  if ~isfield(hmm.gmms{1}, 'covars')
+  if ~isfield(hmm.gmms(1), 'covars')
     covars = ones(ndim, nmix);
     for x = 1:nstates
-      hmm.gmms{x}.covars = covars;
+      hmm.gmms(x).covars = covars;
     end
   end
 end
@@ -160,7 +160,11 @@ if verb
   end
 end
 
-system([get_htk_path 'HRest ' args ' ' hmmfilename ' ' sprintf('%s ', datafilename{:})]);
+retval = system([get_htk_path 'HRest ' args ' ' hmmfilename ' ' sprintf('%s ', datafilename{:})]);
+
+if retval ~= 0
+  error('HTK error!');
+end
 
 if verb
   disp(['******** DONE ********'])
@@ -170,7 +174,8 @@ end
 hmm = read_htk_hmm(hmmfilename);
 
 % clean up:
-system(['rm ' hmmfilename]);
-system(['rm ' sprintf('%s ', datafilename{:})]);
-
+delete(hmmfilename);
+for n = 1:length(datafilename);
+  delete(datafilename{n});
+end
 % done.

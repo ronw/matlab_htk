@@ -71,8 +71,8 @@ else
 end
 
 gmm.covars = ones(ndim, nmix);
-hmm.gmms = {gmm};
+hmm.gmms = gmm;
 
 hmm = train_hmm_htk(trdata, hmm, niter, verb, CVPRIOR);
-gmm = hmm.gmms{1};
+gmm = hmm.gmms;
 

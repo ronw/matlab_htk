@@ -60,7 +60,8 @@ function trainhmms ()
   local x=$1     
   while test $x -le $(($2-1))
     do mkdir hmm$(($x+1))
-    runcmd HERest $SOPTS -I $3 -t 250.0 150.0 1000.0  -S $TRAINFILE -H hmm$x/macros -H hmm$x/hmmdefs -M hmm$(($x+1)) $4
+    #runcmd HERest $SOPTS -I $3 -s statistics -t 250.0 250.0 3000.0  -S $TRAINFILE -H hmm$x/macros -H hmm$x/hmmdefs -M hmm$(($x+1)) $4
+    runcmd HERest $SOPTS -I $3 -t 250.0 250.0 3000.0  -S $TRAINFILE -H hmm$x/macros -H hmm$x/hmmdefs -M hmm$(($x+1)) $4
     x=$((x+1))
   done
 
@@ -136,9 +137,14 @@ trainhmms $HMM $((HMM+3)) aligned.mlf monophones0
 
 #    f. do a sequence of mixture splits (up to $NMIX mixtures per
 #       state for every phone
-N=2;
-while test $N -le $NMIX
-  do echo "MU $N {*.state[2-4].mix}" > mu.hed
+NSTATES=`grep -i NUMSTATES $PROTO_FILE | sed -e 's/[^0-9]*//'`
+# The HTK book recommends that we only increment by one or two
+# components at a time since it has all sorts of heuristics for
+# determining the optimal way to split things
+for ((N=2; N <= NMIX-1; N+=2))
+  do echo "MU $N {*.state[2-$(($NSTATES-1))].mix}" > mu.hed
+
+  echo Splitting GMMs to $N components...
   
   if test ! -d hmm$(($HMM+1))
       then mkdir hmm$(($HMM+1));
@@ -147,10 +153,19 @@ while test $N -le $NMIX
   HMM=$(($HMM+1))
 
   trainhmms $HMM $((HMM+3)) aligned.mlf monophones0
-  
-  N=$((N*2));
 done
 
+# make sure we get the correct number of mixture components
+echo Splitting GMMs to $NMIX components...
+echo "MU $((NMIX)) {*.state[2-$(($NSTATES-1))].mix}" > mu.hed
+if test ! -d hmm$(($HMM+1))
+    then mkdir hmm$(($HMM+1));
+fi
+runcmd HHEd $SOPTS -H hmm$HMM/macros -H hmm$HMM/hmmdefs -M hmm$(($HMM+1)) mu.hed monophones0
+HMM=$(($HMM+1))
+trainhmms $HMM $((HMM+3)) aligned.mlf monophones0
+
+# Done!
 mv hmm$HMM hmm_final
 
 
