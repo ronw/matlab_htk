@@ -1,0 +1,14 @@
+This directory contains a variety of Matlab functions that I've found
+to be useful for my work at LabROSA.  The portions written by me are
+distributed under the terms of the GNU General Public License.  See
+the file COPYING for details.
+
+Contents:
+hmm        - functions for evaluating hidden Markov models and Gaussian
+             mixture models
+matlab_htk - functions that interface with the HTK Speech Recognition
+             Toolkit (http://htk.eng.cam.ac.uk/) for training
+             HMMs, GMMs and simple speech recognizers
+source_sep - implementations of standard algorithms for source
+             separation
+celltools  - useful functional programming style functions for cell arrays
