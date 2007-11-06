@@ -16,22 +16,26 @@ They are all reasonably commented...
  - The important ones:
    - train_hmm_htk - use HTK to train an HMM
    - train_gmm_htk - use HTK to train a GMM
-   - eval_gmm      - find the posterior probability of a gmm given data
+   - eval_gmm      - compute the posterior probability of a GMM given data
+   - eval_hmm      - compute the posterior probabilities of all possible HMM
+                     state sequences given data
+   - decode_hmm    - find the most likely state sequence through the HMM
+                     given data
 
  - Utility functions:
-   - read_htk_hmm  - read in an HTK HMM definition (text format only)
-   - write_htk_hmm - write an HMM structure as an HTK HMM definition
-   - htkwrite.m    - write a Matlab matrix in HTK feature file format
-                     (borrowed from Mark Hasegawa-Johnson courtesy of
-                     the The InterWeb (TM))
-   - compose_hmms  - does FSM composition to form a big HMM from many
-                     small HMMs (i.e. get an HMM to recognize a
-                     sentence from a bunch of phone HMMs).
-   - kmeans        - uses kmeans to learn clusters from data.  used to
-                     initialize GMMs and HMMs.
-   - logsum        - takes the sum of a matrix of log likelihoods
-   - get_htk_path  - centralized location to set the path to HTK
-                     binaries
+   - read_htk_hmm     - read in an HTK HMM definition (text format only)
+   - write_htk_hmm    - write an HMM structure as an HTK HMM definition
+   - htkread/htkwrite - read/write a Matlab matrix in HTK feature file format
+                        (written by Mark Hasegawa-Johnson)
+   - compose_hmms     - does FSM composition to form a big HMM from many
+                        small HMMs (i.e. get an HMM to recognize a
+                        sentence from a bunch of phone HMMs).
+   - kmeans           - uses k-means to learn clusters from data.  Used to
+                        initialize GMMs and HMMs.
+   - logsum           - takes the sum of a matrix of log likelihoods
+   - lmvnpdf          - compute the log probability of data under a
+                        multivariate Gaussian distribution
+   - get_htk_path     - centralized location to set the path to the HTK binaries
  
 * Data Structures
 

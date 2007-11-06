@@ -1,4 +1,4 @@
-function htk_recognizer = train_htk_recognizer(traindat, word_list, word_grammar, phone_dict, traintranscripts, hmmtemplate, nmix, verb, traindat_filenames);
+function htk_recognizer = train_htk_recognizer(traindat, word_list, word_grammar, phone_dict, traintranscripts, hmmtemplate, nmix, verb, shell_script, traindat_filenames);
 % recognizer = train_htk_recognizer(traindat, word_list, word_grammar, dict, traintranscripts,
 %                                   hmmtemplate, nmix, verb)
 %
@@ -34,6 +34,7 @@ function htk_recognizer = train_htk_recognizer(traindat, word_list, word_grammar
 %
 % 2006-11-27 ronw@ee.columbia.edu
 
+if nargin < 9,  shell_script = 'train_htk_recognizer.sh';  end
 
 SCRIPT_DIR = regexp(which('train_htk_recognizer'), '(.+/)[^/]+$', 'tokens');
 SCRIPT_DIR = SCRIPT_DIR{1}{1};
@@ -73,7 +74,7 @@ end
 
 %%% Setup:
 % write a bunch of files.
-base_dir = [get_temp_filename() '/'];
+base_dir = [tempname '/'];
 mkdir(base_dir);
 % place to store the data
 mkdir([base_dir '/data']);
@@ -160,14 +161,15 @@ else
 end
 
 % write HMM template
-hmmtemplate.name = 'proto';
+if ~isfield(hmmtemplate, 'name'),  hmmtemplate.name = 'proto';  end
 hmm_template_filename = [base_dir 'proto'];
 write_htk_hmm(hmm_template_filename, hmmtemplate);
 
 
 %%% Training:
 % we're going to use a shell script to do the rest of this
-retval = system(['sh ' SCRIPT_DIR 'train_htk_recognizer.sh ' ...
+%retval = system(['sh ' SCRIPT_DIR 'train_htk_recognizer.sh ' ...
+retval = system(['sh ' SCRIPT_DIR shell_script ' ' ...
       featfiles ' ' grammar_filename ' ' word_list_filename ' ' ...
       phone_dict_filename ' ' word_trans_filename ' ' ...
       hmm_template_filename ' ' num2str(nmix) ' ' base_dir ...
@@ -188,4 +190,3 @@ htk_recognizer.phone_list = read_text_file([base_dir 'monophones0']);
 htk_recognizer.dict = read_text_file([base_dir 'dict']);
 
 rmdir(base_dir, 's');
-

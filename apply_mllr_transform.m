@@ -9,7 +9,7 @@ function hmms = apply_mllr_transform(hmms, W, b)
 if isfield(hmms, 'hmms')
   % we got a recognizer structure, not a list of hmms
   hmms.hmms = apply_mllr_transform(hmms.hmms, W, b);
-else
+elseif isfield(hmms, 'emission_type')
   for h = 1:length(hmms)
     if strcmp(hmms(h).emission_type, 'gaussian')
       hmms(h).means = W*hmms(h).means + repmat(b, [1, hmms(h).nstates]);
@@ -20,4 +20,7 @@ else
       end
     end
   end
+else
+  % hmms is just a matrix
+  hmms = W*hmms + repmat(b, [1, size(hmms, 2)]);
 end

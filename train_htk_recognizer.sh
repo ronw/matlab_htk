@@ -1,6 +1,7 @@
 #~/bin/bash
 #
-# Trains a speech recognizer using HTK.  The final HMM can be found in $TMPDIR/hmm/hmmdefs
+# Trains a speech recognizer using HTK.  Starts from a flat start
+# model.  The final HMM can be found in $TMPDIR/hmm/hmmdefs
 
 TRAINFILE=$1 #./speakers11_34_wavs.scp
 TRAINFEATFILE=$TRAINFILE
@@ -100,7 +101,7 @@ DE sp" > mkphones0.led
 
 runcmd HLEd $SOPTS -l '*' -d dict -i phones0.mlf mkphones0.led $TRAINTRANSFILE
 
-# This doesn't do feature extraction.
+# This script doesn't do feature extraction.
 ## 4. feature extraction from training data:
 ##HCopy $SOPTS -S $TRAINFEATFILE
 
@@ -128,7 +129,8 @@ perl -ne "BEGIN {open(FD,\"hmm$HMM/$proto\"); @proto=<FD>; close FD; @proto=@pro
 #    c. do some training rounds (monophones0 should contain sil but not sp)
 trainhmms $HMM $((HMM+3)) phones0.mlf monophones0
 
-#5    e. realign the training data
+#5   e. realign the training data, forcing the beginning and end of the
+#       utterance to fall into the silence state
 echo "silence sil" >> dict
 #HVite $SOPTS -l '*' -o SWT -b silence -a -H hmm$HMM/macros -H hmm$HMM/hmmdefs -i aligned.mlf -m -t 250.0 -y lab -I $TRAINTRANSFILE -S $TRAINFILE dict monophones1 
 runcmd HVite $SOPTS -l '*' -o SWT -b silence -a -H hmm$HMM/macros -H hmm$HMM/hmmdefs -i aligned.mlf -m -y lab -I $TRAINTRANSFILE -S $TRAINFILE dict monophones0 

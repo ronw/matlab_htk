@@ -19,9 +19,10 @@ if strcmp(w.state, 'on')
   warning('off', 'MATLAB:log:logOfZero');
 end
 
-nhmms = length(hmms);
 
 if nargin < 2
+  nhmms = length(hmms);
+  meta_hmm.nstates = length(hmms);
   meta_hmm.labels = cellstr(strvcat(hmms.name));
   meta_hmm.transmat = log(ones(nhmms)/(nhmms+1));
   meta_hmm.start_prob = log(ones(1, nhmms)/nhmms);
@@ -29,7 +30,19 @@ if nargin < 2
   meta_hmm.name = 'FST';
 end
 
+nhmms = meta_hmm.nstates;
+
+% make sure the labels of the grammar match those of the hmms
 hmms_names = cellstr(strvcat(hmms.name));
+map = zeros(1, meta_hmm.nstates);
+for i = 1:meta_hmm.nstates
+  map(i) = strmatch(meta_hmm.labels{i}, hmms_names, 'exact');
+end
+
+hmms = hmms(map);
+hmms_names = cellstr(strvcat(hmms.name));
+
+
 hmms_nstates = cat(2, hmms.nstates);
 hmms_indices = cumsum([1 hmms_nstates(1:end-1)]);
 
@@ -62,11 +75,12 @@ for x = 1:nhmms
   hmm.end_prob(source_idx) = meta_hmm.end_prob(x) ...
       + hmms(x).end_prob;
 
+  % probability of transitioning from one hmm to another
   for y = 1:nhmms
     dest_idx = hmms_indices(y)+[0:hmms_nstates(y)-1];
 
     source_prob = exp(hmms(x).end_prob);
-    dest_prob = exp(hmms(x).start_prob);
+    dest_prob = exp(hmms(y).start_prob);
 
     % make sure we have column vectors
     source_prob = source_prob(:);
@@ -77,9 +91,11 @@ for x = 1:nhmms
         + meta_hmm.transmat(x,y);
   end
 
-  % fix the diagonal
-  hmm.transmat(source_idx,source_idx) = meta_hmm.transmat(x,x) ...
-      + hmms(x).transmat;
+  % probability of remaining in the same hmm (including some
+  % probability that we will loop back (given by the self loop
+  % probability in meta_hmm))
+  hmm.transmat(source_idx,source_idx) = log(exp(hmms(x).transmat) ...
+      + exp(meta_hmm.transmat(x,x))*exp(hmms(x).end_prob(:))*exp(hmms(x).start_prob(:))');
 end
 
 % normalize transmat and end_prob properly

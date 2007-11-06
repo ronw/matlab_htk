@@ -5,8 +5,6 @@ function hmm = train_hmm_htk(trdata, hmm, niter, verb, CVPRIOR);
 %  initial HMM parameters (number of states, emission type, initial
 %  transition matrix...).  
 %
-%  Note that as of 2006-12-07 GMM support is completely untested
-%
 % Inputs:
 % trdata  - training data (cell array of training sequences, each
 %                          column of the sequences arrays contains a
@@ -132,9 +130,12 @@ for n = 1:length(trdata)
   %htkcode = 6;  % MFCC
   htkwrite(trdata{n}', datafilename{n}, htkcode);
 end
+scpfilename = ['/tmp/matlabtmp_htkdatafiles_' rnd '.scp'];
+write_text_file(scpfilename, datafilename);
 
 % initial HTK HMM: HInit/HCompV? 
 hmmfilename = ['/tmp/matlabtmp_htkhmm_' rnd];
+hmm.name = ['matlabtmp_htkhmm_' rnd];
 write_htk_hmm(hmmfilename, hmm); 
 
 if use_hinit
@@ -157,10 +158,11 @@ if verb
   args = [args ' -T 3'];
   if verb > 1
     args = [args ' -A -V -D'];
-  end
+  end 
 end
 
-retval = system([get_htk_path 'HRest ' args ' ' hmmfilename ' ' sprintf('%s ', datafilename{:})]);
+%retval = system([get_htk_path 'HRest ' args ' ' hmmfilename ' ' sprintf('%s ', datafilename{:})]);
+retval = system([get_htk_path 'HRest ' args ' -S ' scpfilename ' ' hmmfilename]);
 
 if retval ~= 0
   error('HTK error!');

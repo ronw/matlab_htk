@@ -5,7 +5,7 @@ function gmm = train_gmm_htk(trdata, nmix, niter, verb, CVPRIOR, mu0);
 %
 % Inputs:
 % trdata - training data (cell array of training sequences, each
-%                         column of the sequences arrays contains ana
+%                         column of the sequences arrays contains an
 %                         observation)
 % nmix   - number of mixture components.  Defaults to 3.
 % niter  - number of EM iterations to perform.  Defaults to 10.

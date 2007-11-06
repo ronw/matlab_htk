@@ -14,13 +14,13 @@ function [pr, mlg, p, mmserecon] = eval_gmm(gmm, data)
 p = zeros(gmm.nmix, ndat);
 pr = zeros(1,ndat)-Inf;
 
-p = lmvnpdf(data, gmm.means, gmm.covars) + repmat(gmm.priors', [1, ndat]);
+p = lmvnpdf(data, gmm.means, gmm.covars) ...
+    + repmat(gmm.priors(:), [1, ndat]);
 pr = logsum(p, 1);
 
 if nargout > 1
   [mlg tmp] = ind2sub(size(p), find(p == repmat(max(p),gmm.nmix,1)));
 end
-
 
 if nargout >= 4
   % normalize p
