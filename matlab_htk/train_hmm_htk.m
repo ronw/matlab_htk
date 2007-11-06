@@ -146,7 +146,7 @@ if use_hinit
   end
   disp('running HInit...');
   datestr(now)
-  system(['HInit ' args ' ' hmmfilename ' ' sprintf('%s ', datafilename{:})]);
+  system([get_htk_path 'HInit ' args ' ' hmmfilename ' ' sprintf('%s ', datafilename{:})]);
   datestr(now)
   disp('done.');
 end 

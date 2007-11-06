@@ -14,13 +14,15 @@ http://mlunit.sf.net or something similar I won't say no.
 They are all reasonably commented...
 
  - The important ones:
-   - train_hmm_htk - use HTK to train an HMM
-   - train_gmm_htk - use HTK to train a GMM
-   - eval_gmm      - compute the posterior probability of a GMM given data
-   - eval_hmm      - compute the posterior probabilities of all possible HMM
-                     state sequences given data
-   - decode_hmm    - find the most likely state sequence through the HMM
-                     given data
+   - train_hmm_htk        - use HTK to train an HMM
+   - train_gmm_htk        - use HTK to train a GMM
+   - train_htk_recognizer - train a simple HTK recognizer
+   - eval_gmm             - compute the posterior probability of a GMM given data
+   - eval_hmm             - compute the posterior probabilities of all possible HMM
+                            state sequences given data
+   - decode_hmm           - find the most likely state sequence through the HMM
+                            given data
+   - eval_htk_recognizer  - recognize signal using HTK recognizer
 
  - Utility functions:
    - read_htk_hmm     - read in an HTK HMM definition (text format only)
