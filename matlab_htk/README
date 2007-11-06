@@ -17,11 +17,6 @@ They are all reasonably commented...
    - train_hmm_htk        - use HTK to train an HMM
    - train_gmm_htk        - use HTK to train a GMM
    - train_htk_recognizer - train a simple HTK recognizer
-   - eval_gmm             - compute the posterior probability of a GMM given data
-   - eval_hmm             - compute the posterior probabilities of all possible HMM
-                            state sequences given data
-   - decode_hmm           - find the most likely state sequence through the HMM
-                            given data
    - eval_htk_recognizer  - recognize signal using HTK recognizer
 
  - Utility functions:
@@ -35,8 +30,6 @@ They are all reasonably commented...
    - kmeans           - uses k-means to learn clusters from data.  Used to
                         initialize GMMs and HMMs.
    - logsum           - takes the sum of a matrix of log likelihoods
-   - lmvnpdf          - compute the log probability of data under a
-                        multivariate Gaussian distribution
    - get_htk_path     - centralized location to set the path to the HTK binaries
  
 * Data Structures
