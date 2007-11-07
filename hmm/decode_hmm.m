@@ -41,19 +41,11 @@ if nargin < 6
   verb = 0;
 end
 
-% make sure the hmms have gaussian emissions
-%hmm1 = convert_hmm_to_gaussian_emissions(hmm1);
-%hmm2 = convert_hmm_to_gaussian_emissions(hmm2);
-
-
 % how big should our rank pruning histogram be?
 histSize = 1000;
 
 [ndim, nobs] = size(seq);
 
-% I am not going to do this in a graph since its slow as hell...
-% hopefully the sequences aren't so long so the state/obs lattice
-% isn't too big
 stateseq = zeros(1, nobs);
 tb = zeros(hmm.nstates, nobs);
 

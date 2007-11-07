@@ -3,11 +3,12 @@ This package contains a set of functions for evaluating HMMs and GMMs.
 * Functions
 
  - The important ones:
-   - eval_gmm             - compute the posterior probability of a GMM given data
-   - eval_hmm             - compute the posterior probabilities of all possible HMM
-                            state sequences given data
-   - decode_hmm           - find the most likely state sequence through the HMM
-                            given data
+   - train_gmm  - train a GMM from data
+   - eval_gmm   - compute the posterior probability of a GMM given data
+   - eval_hmm   - compute the posterior probabilities of all possible HMM
+                  state sequences given data
+   - decode_hmm - find the most likely state sequence through the HMM
+                  given data
 
  - Utility functions:
    - logsum           - takes the sum of a matrix of log likelihoods
@@ -23,7 +24,7 @@ Note: all probabilities are stored as log probabilities
   - gmm.nmix   - number of components in the mixture
   - gmm.priors - array of prior log probabilities over each state
   - gmm.means  - matrix of means (column x is mean of component x)
-  - gmm.covars - matrix of covariance (column x is the diagonal of the
+  - gmm.covars - matrix of covariances (column x is the diagonal of the
                  covariance matrix of component x)
 
 ** HMM with GMM observations
