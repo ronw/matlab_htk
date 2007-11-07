@@ -20,7 +20,7 @@ function Y = lazymap(fun, C)
 % from a set of files, a call like:
 % features = lazymap(@(x) compute_features(x, param1, param2), filenames)
 % can be used to give convenient access to the features of a large
-% dataset without having to store them all in memory.
+% data set without having to store all of it in memory.
 %
 % Note that this class doesn't support memoization so subsequent
 % references to the same element, e.g. y{1}; y{1};, will result in

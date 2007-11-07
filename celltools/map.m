@@ -1,9 +1,20 @@
-function Y = map(fun, C)
+function varargout = map(fun, varargin)
 % Y = map(fun, C)
 %
 % Wrapper around cellfun.  Takes function handle fun and cell array
 % C and returns a new cell array that contains the result of
 % applying fun to each element of C.
+% 
+% If fun takes N arguments, map must be passed N cell arrays
+% corresponding to those N arguments:
+% Y = map(fun, C1, C2, C3, ...);
+% Each input cell array must have the same size.
+%
+% Similarly, map can handle functions that have multiple outputs. If
+% called like this:
+% [Y1, Y2, Y3, ...] = map(fun, C)
+% Y1, Y2, ... will each be a cell array containing the analogous
+% outputs of fun.
 %
 % 2007-11-06 ronw@ee.columbia.edu
 
@@ -26,9 +37,9 @@ if ~isa(fun, 'function_handle')
   error('1st argument must be a function handle')
 end
 
-if ~iscell(C)
+if ~iscell(varargin{1})
   error('2nd argument must be a cell array.')
 end
 
 
-Y = cellfun(fun, C, 'UniformOutput', 0);
+[varargout{1:nargout}] = cellfun(fun, varargin{:}, 'UniformOutput', 0);
