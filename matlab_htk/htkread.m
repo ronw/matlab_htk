@@ -37,7 +37,7 @@ HTKCode = fread(fid,1,'int16');
 if bitget(HTKCode, 11),
     DIM=sampSize/2;
     nSamp = nSamp-4;
-    disp(sprintf('htkread: Reading %d frames, dim %d, compressed, from %s',nSamp,DIM,Filename)); 
+    %disp(sprintf('htkread: Reading %d frames, dim %d, compressed, from %s',nSamp,DIM,Filename)); 
 
     % Read the compression parameters
     A = fread(fid,[1 DIM],'float');
@@ -50,7 +50,7 @@ B = fread(fid,[1 DIM],'float');
     
 else
     DIM=sampSize/4;
-    disp(sprintf('htkread: Reading %d frames, dim %d, uncompressed, from %s',nSamp,DIM,Filename)); 
+    %disp(sprintf('htkread: Reading %d frames, dim %d, uncompressed, from %s',nSamp,DIM,Filename)); 
 
     % If not compressed: Read floating point data
     DATA = fread(fid, [DIM nSamp], 'float')';

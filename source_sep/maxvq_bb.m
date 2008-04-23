@@ -1,5 +1,5 @@
 function [ll, ss, mask] = maxvq_bb(obs, gmms, verb);
-% [logpr, seq, masks] = maxvq_bb(obs, gmms, verb);
+% [logpr, seq, mask] = maxvq_bb(obs, gmms, verb);
 %
 % Evaluate MAP MAXVQ probabilities and create binary masks using
 % Sam Roweis' efficient branch and bound algorithm.
@@ -12,7 +12,7 @@ function [ll, ss, mask] = maxvq_bb(obs, gmms, verb);
 %   logpr - MAP probability of each frame of data given the models
 %   seq   - cell array containing the MAP sequence of GMM components
 %           for each model
-%   masks - cell array of binary masks for each model that notate
+%   mask  - cell array of binary masks for each model that notate
 %           the portions of obs that are explained by that model
 %
 % References:
@@ -36,7 +36,7 @@ function [ll, ss, mask] = maxvq_bb(obs, gmms, verb);
 % You should have received a copy of the GNU General Public License
 % along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-if nargin < 4,  verb = 0;  end
+if nargin < 3,  verb = 0;  end
 
 [ndim nobs] = size(obs);
 nmodels = length(gmms);

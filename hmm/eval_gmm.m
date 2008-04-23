@@ -1,5 +1,5 @@
 function [ll, post, mlg, mmserecon] = eval_gmm(gmm, data, norm)
-% [loglik, posteriors, mlgauss, recon] = eval_gmm(gmm, data)
+% [loglik, posteriors, mlseq, recon] = eval_gmm(gmm, data)
 %
 % Evaluate the log probability of each column of data given GMM gmm.
 %
@@ -7,7 +7,7 @@ function [ll, post, mlg, mmserecon] = eval_gmm(gmm, data, norm)
 % loglik     - log likelihood of each colimn of data
 % posteriors - posterior probability of each GMM component for each
 %              column of data
-% mlgauss    - index of the most likely GMM component for each
+% mlseq      - index of the most likely GMM component for each
 %              column of data
 % recon      - MMSE reconstruction of data given the GMM
 %

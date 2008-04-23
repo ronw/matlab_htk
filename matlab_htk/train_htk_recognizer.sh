@@ -3,14 +3,13 @@
 # Trains a speech recognizer using HTK.  Starts from a flat start
 # model.  The final HMM can be found in $TMPDIR/hmm/hmmdefs
 
-TRAINFILE=$1 #./speakers11_34_wavs.scp
+TRAINFILE=$1 
 TRAINFEATFILE=$TRAINFILE
- #./trainall-featextract.scp
-GRAMFILE=$2 #./grammar.bnf
-WDLIST=$3 #./wdlist
-DICTFILE=$4 #./beep
+GRAMFILE=$2 
+WDLIST=$3 
+DICTFILE=$4 
 #word level transcripts
-TRAINTRANSFILE=$5 #./words.mlf 
+TRAINTRANSFILE=$5 
 #TRAINEVAL=./train_eval.mlf
 
 PROTO_FILE=$6
@@ -62,7 +61,8 @@ function trainhmms ()
   while test $x -le $(($2-1))
     do mkdir hmm$(($x+1))
     #runcmd HERest $SOPTS -I $3 -s statistics -t 250.0 250.0 3000.0  -S $TRAINFILE -H hmm$x/macros -H hmm$x/hmmdefs -M hmm$(($x+1)) $4
-    runcmd HERest $SOPTS -I $3 -t 250.0 250.0 3000.0  -S $TRAINFILE -H hmm$x/macros -H hmm$x/hmmdefs -M hmm$(($x+1)) $4
+    #runcmd HERest $SOPTS -I $3 -t 250.0 250.0 3000.0  -S $TRAINFILE -H hmm$x/macros -H hmm$x/hmmdefs -M hmm$(($x+1)) $4
+runcmd HERest $SOPTS -I $3 -t 250.0 250.0 3000.0  -v 1 -S $TRAINFILE -H hmm$x/macros -H hmm$x/hmmdefs -M hmm$(($x+1)) $4
     x=$((x+1))
   done
 
@@ -78,11 +78,14 @@ function trainhmms ()
 
 
 # 1. make a grammar that HTK understands
-if [ `head -1 $GRAMFILE | cut -d " " -f 1 | cut -d "=" -f 1` = "VERSION" ]
-    # the grammar already an SLF file?
-    then cp $GRAMFILE wdnet
-else
-    runcmd HParse $GRAMFILE wdnet
+if [ -e $GRAMFILE ]
+then
+  if [ `head -1 $GRAMFILE | cut -d " " -f 1 | cut -d "=" -f 1` == "VERSION" ]
+      # the grammar already an SLF file?
+      then cp $GRAMFILE wdnet
+  else
+      runcmd HParse $GRAMFILE wdnet
+  fi
 fi
 
 # 2. compile an HTK formatted dictionary
@@ -97,6 +100,9 @@ rm -f tmp;
 # 3. convert word level transcripts to phone level transcripts
 echo "EX
 IS sil sil
+DE sp" > mkphones0.led
+# FIXME
+echo "EX
 DE sp" > mkphones0.led
 
 runcmd HLEd $SOPTS -l '*' -d dict -i phones0.mlf mkphones0.led $TRAINTRANSFILE
@@ -121,6 +127,7 @@ VECSIZE=`cat $PROTO_FILE | grep -i MEAN | head -1 | cut -s -d ">" -f 2 | tr -d '
 echo "~o" > hmm$HMM/macros
 echo "<VecSize> $VECSIZE" >> hmm$HMM/macros
 echo "<USER>" >> hmm$HMM/macros
+#echo "<MFCC_0_D_A>" >> hmm$HMM/macros
 cat hmm$HMM/vFloors >> hmm$HMM/macros
 
 proto=`echo $PROTO_FILE | rev | cut -d "/" -f 1 | rev`

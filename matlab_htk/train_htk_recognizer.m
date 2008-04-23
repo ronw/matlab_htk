@@ -83,8 +83,9 @@ end
 
 HTK_OPTIONS = '';
 if verb
- HTK_OPTIONS = '-A -D ';
+ HTK_OPTIONS = ['-A -D -T ' num2str(verb)];
 end
+
 
 
 %%% Setup:
@@ -104,7 +105,9 @@ elseif iscellstr(word_grammar)
   write_text_file(grammar_filename, word_grammar);
 else
   grammar_filename = word_grammar;
-  word_grammar = read_text_file(grammar_filename);
+  if exist(word_grammar, 'file')
+    word_grammar = read_text_file(grammar_filename);
+  end
 end
 
 % dictionary
