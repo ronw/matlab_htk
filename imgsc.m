@@ -127,17 +127,17 @@ for x = 1:ndat
       subplot(subp(1), subp(2), x);
     end
   end
-
-  if min(size(data{x})) == 1
-    plot(data{x})
+  
+  if prod(size(data{x})) == 1
+    bar(data{x});
+    xlim([0 2]);
     grid on
-    %if ~isempty(xlbls),  xlabel(xlbls{min(length(xlbls), x)});  end
-    %if ~isempty(ylbls),  ylabel(ylbls{min(length(ylbls), x)});  end
+  elseif min(size(data{x})) == 1
+    plot(data{x})
+    xlim([1 length(data{x})])
+    grid on
   else
     imagesc(data{x}); 
-
-    %if ~isempty(xlbls),  xlabel(xlbls{min(length(xlbls), x)});  end
-    %if ~isempty(ylbls),  ylabel(ylbls{min(length(ylbls), x)});  end
 
     axis(ax);
     if ~isempty(cax),  caxis(cell_index(cax, x));  end
@@ -160,7 +160,7 @@ for x = 1:ndat
   if ~isempty(xticks),  set(gca, 'xtick', cell_index(xticks, x));  end
   if ~isempty(xticklbls),  set(gca, 'xticklabel', cell_index(xticklbls, x)); end
   if ~isempty(ylbls),  ylabel(cell_index(ylbls, x)); end
-  if ~isempty(ylims),  xlim(cell_index(ylims, x));  end
+  if ~isempty(ylims),  ylim(cell_index(ylims, x));  end
   if ~isempty(yticks),  set(gca, 'ytick', cell_index(yticks, x));  end
   if ~isempty(yticklbls),  set(gca, 'yticklabel', cell_index(yticklbls, x)); end
 
