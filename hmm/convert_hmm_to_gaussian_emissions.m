@@ -64,5 +64,4 @@ for n = 1:length(hmms)
   end
 
   new_hmms(n).start_prob = new_hmms(n).start_prob + priors';
-  new_hmms(n).end_prob = new_hmms(n).end_prob + priors';
 end

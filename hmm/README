@@ -27,7 +27,7 @@ Note: all probabilities are stored as log probabilities
   - gmm.covars - matrix of covariances (column x is the diagonal of the
                  covariance matrix of component x)
 
-** HMM with GMM observations
+** HMM with GMM observations (does not work with all functions)
   - hmm.name          - 
   - hmm.nstates       - number of states in the HMM
   - hmm.emission_type - 'GMM'
@@ -54,7 +54,7 @@ Note: all probabilities are stored as log probabilities
 
 Note that each row of exp(hmm.transmat) does not necessarily sum to 1
 because for each state x there is some probability
-(exp(hmm.exit_prob(x))) that the next transition will be to a
+(exp(hmm.end_prob(x))) that the next transition will be to a
 non-emitting exit state (i.e. the current observation is the last
 observation in the sequence).  The correct invariant is:
-sum(exp(hmm.transmat, 2)) + exp(hmm.exit_prob) == ones(hmm.nstates, 1)
+sum(exp(hmm.transmat), 2)' + exp(hmm.end_prob) == ones(hmm.nstates, 1)
