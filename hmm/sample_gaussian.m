@@ -1,7 +1,8 @@
-function samples = sample_gmm(gmm, nsamp)
-% samples = sample_gmm(gmm, N)
+function y = sample_gaussian(mu, cv)
+% sample = sample_gaussian(mu, cv)
 %
-% Generate N random samples from the given GMM.
+% Generate a random sample from a Gaussian distribution with the given
+% parameters.
 %
 % 2008-06-04 ronw@ee.columbia.edu
 
@@ -20,15 +21,4 @@ function samples = sample_gmm(gmm, nsamp)
 % You should have received a copy of the GNU General Public License
 % along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-prior_pdf = exp(gmm.priors);
-prior_cdf = cumsum(prior_pdf);
-
-ndim = size(gmm.means, 1);
-
-samples = zeros(ndim, nsamp);
-for n = 1:nsamp
-  p = rand(1);
-  c = min(find(prior_cdf >= p));
-  samples(:,n) = sample_gaussian(gmm.means(:,c), gmm.covars(:,c));
-end
-
+y = randn(size(mu)).*sqrt(cv) + mu;

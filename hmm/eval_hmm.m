@@ -1,12 +1,12 @@
-function [loglik, lattice] = eval_hmm(hmm, seq, maxRank, beamLogProb, do_backward, verb)
+function [loglik, lattice, alpha, beta, gamma] = eval_hmm(hmm, frameLogLike, maxRank, beamLogProb, do_backward, verb)
 % [loglik, lattice] = eval_hmm(hmm, seq, rank, beam)
 %
 % Performs forward-backward inference on seq.  Does rank and beam
 % pruning.  Assumes all hmm params are logprobs.
 %
-% 2007-02-26 ronw@ee.columbia.edu
+% 2008-08-11 ronw@ee.columbia.edu
 
-% Copyright (C) 2007 Ron J. Weiss
+% Copyright (C) 2006-2008 Ron J. Weiss
 %
 % This program is free software: you can redistribute it and/or modify
 % it under the terms of the GNU General Public License as published by
@@ -21,227 +21,169 @@ function [loglik, lattice] = eval_hmm(hmm, seq, maxRank, beamLogProb, do_backwar
 % You should have received a copy of the GNU General Public License
 % along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-zeroLogProb = -1e200;
 
 % no rank pruning by default
 if nargin < 3
   maxRank = 0;
 end
 
-% no beam pruning by default
+% No beam pruning by default.
 if nargin < 4
   beamLogProb = -Inf;
 end
 
 if nargin < 5
-  do_backward = 1;
+  do_backward = true;
 end
 
 if nargin < 6
   verb = 0;
 end
 
-% don't bother doing backward calculation if all we want is log
-% likelihood
+% Don't bother doing backward calculation if all we want is log
+% likelihood.
 if nargout < 2
-  do_backward = 0;
-end
-
-
-% how big should our rank pruning histogram be?
-histSize = 1000;
-
-[ndim, nobs] = size(seq);
-
-
-%%%
-% fill in the lattice...
-
-% Do it HTK style - backward, then forward
-
-if do_backward 
-
-  nextLatticeFrame = hmm.end_prob(:);
-  nextFrameLogProb = logsum(nextLatticeFrame(nextLatticeFrame > zeroLogProb));
-
-  if nargout > 1
-    lattice = repmat(zeroLogProb, [hmm.nstates, nobs]);
-    lattice(:, end) = nextLatticeFrame;
-  end
-
-  if verb >= 2
-    disp('Starting backward pass...');
-  end
-  
-  avg_nactive = 0;
-  for obs = nobs-1:-1:1
-    if verb >= 2
-      tic
-    end
-    
-    % beam pruning
-    threshLogProb = nextFrameLogProb + beamLogProb;
-    
-    % rank pruning               
-    if maxRank > 0
-      tmp = nextLatticeFrame(:);
-      min_tmp = 2*min(tmp(tmp > zeroLogProb));
-      tmp(tmp < zeroLogProb) = min_tmp;
-      
-      [hst cdf] = hist(tmp, histSize);
-    
-      % want to look at the high ranks of the last frame
-      hst = hst(end:-1:1);
-      cdf = cdf(end:-1:1);
-    
-      hst = cumsum(hst);
-      idx = min(find(hst >= maxRank));
-      rankThresh = cdf(idx);
-      
-      % only change the threshold if it is stricter than the beam
-      % threshold
-      threshLogProb = max(threshLogProb, rankThresh);
-    
-      if verb >= 3
-        %imgsc(prevLatticeFrame), colorbar, title(num2str(obs)), drawnow
-        
-        disp(['beam thresh = ' num2str(prevFrameMaxLogProb+beamLogProb) ...
-              ', rank thresh = ' num2str(rankThresh) ...
-              ', final thresh = ' num2str(threshLogProb)]);
-      end
-    end
-    
-    % which states are active?
-    s_idx = find(nextLatticeFrame >= threshLogProb);
-    nactive = numel(s_idx);
-    avg_nactive = avg_nactive + nactive/nobs;
-
-    
-    pr = hmm.transmat(:, s_idx) + repmat(nextLatticeFrame(s_idx), [1, hmm.nstates])';
-    pr(pr <= zeroLogProb) = zeroLogProb;
-  
-    p_idx = find(logsum(pr, 2) > zeroLogProb);
-    np = length(p_idx);
-    currllik = repmat(zeroLogProb, [hmm.nstates, 1]);
-    if strcmp(hmm.emission_type, 'gaussian')
-      currllik(p_idx) = lmvnpdf(seq(:,obs+1), hmm.means(:, p_idx), ...
-          hmm.covars(:, p_idx));
-    else
-      for s = 1:np
-        currllik(p_idx(s)) = eval_gmm(hmm.gmms(p_idx(s)), seq(:,obs+1));
-      end
-    end
-    
-    nextLatticeFrame = logsum(pr + repmat(currllik, [1, nactive]), 2);
-    
-    nextFrameLogProb = logsum(nextLatticeFrame(nextLatticeFrame > zeroLogProb));
-    
-    if nargout > 1
-      lattice(:, obs) = nextLatticeFrame;
-    end
-  
-    if verb >= 2
-      T = toc;
-      disp(['  frame ' num2str(obs), ' (' num2str(T) ' sec)' ...
-            ': total active states: ' num2str(nactive)]);
-    end
-  end
-
-  loglik = nextFrameLogProb;
+  do_backward = false;
 else
-  nextLatticeFrame = 0;
+  do_backward = true;
 end
 
+zeroLogProb = -1e200;
+hmm.transmat(hmm.transmat < zeroLogProb) = zeroLogProb;
 
-
-
-if verb >= 2
-  disp('Starting forward pass...');
-end
-
-prevLatticeFrame = hmm.start_prob(:);
-
-% new threshold
-
-tmp = prevLatticeFrame + nextLatticeFrame;
-%ntmp = logsum(tmp);%(tmp > zeroLogProb));
-%s_idx = find(tmp > threshLogProb + ntmp);
-
-if do_backward
-  threshLogProb = -100;
-else
-  loglik = zeroLogProb;
-  threshLogProb = zeroLogProb;
-end
-
-s_idx = find(tmp > loglik + threshLogProb);
-%s_idx = find(tmp > zeroLogProb);
-
-%avg_nactive = 0;
-prevFrameMaxLogProb = 0;
-for obs = 1:nobs
-  if verb >= 2
-    tic
-  end
-
-  nactive = numel(s_idx);
-
-  % which states are active?
-  pr = hmm.transmat(s_idx, :)' + repmat(prevLatticeFrame(s_idx), [1, hmm.nstates])';
-  pr(pr <= zeroLogProb) = zeroLogProb;
-  
-  p_idx = find(logsum(pr, 2) > zeroLogProb);
-  np = length(p_idx);
-  currllik = repmat(zeroLogProb, [hmm.nstates, 1]);
+% Verify type of observations.  Can be observed sequence or
+% precomputed log likelihoods (i.e. for variational inference).
+[nstates, nobs] = size(frameLogLike);
+if nstates ~= hmm.nstates && nstates == size(hmm.means, 1)
+  seq = frameLogLike;
+  ndim = nstates;
+  nstates = hmm.nstates;
   if strcmp(hmm.emission_type, 'gaussian')
-    currllik(p_idx) = lmvnpdf(seq(:,obs), hmm.means(:, p_idx), ...
-        hmm.covars(:, p_idx));
+    frameLogLike = lmvnpdf(seq, hmm.means, hmm.covars);
+  elseif strcmp(hmm.emission_type, 'GMM')
+    for s = 1:hmm.nstates
+      frameLogLike(s,:) = eval_gmm(hmm.gmms(s), seq);
+    end
   else
-    for s = 1:np
-      currllik(p_idx(s)) = eval_gmm(hmm.gmms(p_idx(s)), seq(:,obs));
-    end
+    error('Unknown HMM emission distribution.');
   end
-  
-  prevLatticeFrame = logsum(pr, 2) + currllik;
+end
 
-  if nargout > 1
-    % compute gamma = P(in state combination s1,s2 at time obs 
-    %                       | all observations)
-    
-    tmp = prevLatticeFrame;
-    if do_backward
-      tmp = tmp + lattice(:,obs);
-    end
-    nntmp = logsum(tmp);
-    etmp = exp(tmp - nntmp);
-    etmp(etmp < 1e-5) = 0;
-    lattice(:,obs) = etmp;  
-  
-    loglik = nntmp;
-  end
-  
-  %[loglik  max(tmp), loglik-max(tmp)]
 
-  % Use HTK style pruning (p. 137 of HTK Book version 3.4) - don't
-  % bother computing backward probability if alpha*beta is more than
-  % a certain distance from loglik
-  %s_idx = find(tmp > threshLogProb + ntmp);
-  %s_idx = find(tmp > zeroLogProb);
+%%%%%
+% Forward
+%%%%%
+alpha = zeros(nstates, nobs) - Inf;
+prevLatticeFrame = hmm.start_prob(:) + frameLogLike(:,1);
+alpha(:,1) = prevLatticeFrame;
+if verb >= 2
+  fprintf('Starting forward pass...\n  frame 1: ll = %f\n', ...
+      logsum(prevLatticeFrame))
+end
+
+for obs = 2:nobs
+  if verb >= 2; tic; end
+
+  idx = prune_states(prevLatticeFrame, maxRank, beamLogProb, verb);
+  pr = hmm.transmat(idx,:)' + repmat(prevLatticeFrame(idx), [1, hmm.nstates])';
+  prevLatticeFrame = logsum(pr, 2) + frameLogLike(:, obs);
+  alpha(:,obs) = prevLatticeFrame;
   
-  s_idx = find(tmp > loglik + threshLogProb);
-    
   if verb >= 2
     T = toc;
-    disp(['  frame ' num2str(obs), ' (' num2str(T) ' sec)' ...
-          ': total active states: ' num2str(nactive)]);
+    fprintf('  frame %d: ll = %f (%f sec, %d active states)\n', obs, ...
+        logsum(prevLatticeFrame), T, length(idx));
   end
 end
+alpha(alpha <= zeroLogProb) = -Inf;
 
-tmp(tmp < zeroLogProb) = zeroLogProb;
-%loglik = logsum(tmp);
+% Don't forget hmm.end_prob
+nextLatticeFrame = hmm.end_prob(:) + frameLogLike(:,end);
+loglik = logsum(prevLatticeFrame + nextLatticeFrame);
 
 if verb
-  disp(['eval_hmm: log likelihood: ' num2str(loglik) ...
-        ', average number of active states per frame: ' ...
-        num2str(avg_nactive)]);
+  fprintf('eval_hmm: log likelihood = %f\n', loglik)
 end
+
+
+if ~do_backward
+  return
+end
+
+%%%%%
+% Backward
+%%%%%
+beta = zeros(nstates, nobs) - Inf;
+beta(:,nobs) = nextLatticeFrame;
+if verb >= 2
+  fprintf('Starting backward pass...\n  frame %d: ll = %f\n', nobs, ...
+      logsum(nextLatticeFrame));
+end
+
+for obs = nobs-1:-1:1
+  if verb >= 2; tic; end
+     
+  % Do HTK style pruning (p. 137 of HTK Book version 3.4).  Don't
+  % bother computing backward probability if alpha*beta is more than a
+  % certain distance from the total log likelihood.
+  idx = prune_states(nextLatticeFrame + alpha(:,obs+1), 0, -20, verb);
+  
+  pr = hmm.transmat(:,idx) + repmat(nextLatticeFrame(idx) ...
+      + frameLogLike(idx,obs+1), [1, hmm.nstates])';
+  nextLatticeFrame = logsum(pr, 2);
+  beta(:,obs) = nextLatticeFrame;
+  
+  if verb >= 2
+    T = toc;
+    fprintf('  frame %d: ll = %f (%f sec, %d active states)\n', obs, ...
+        logsum(nextLatticeFrame), T, length(idx));
+  end
+end
+beta(beta <= zeroLogProb) = -Inf;
+
+gamma = alpha + beta;
+lattice = exp(gamma - repmat(logsum(gamma, 1), [hmm.nstates 1]));
+
+
+
+function [state_idx thresh] = prune_states(latticeFrame, ...
+    maxRank, beamLogProb, verb)
+zeroLogProb = -1e200;
+
+frameLogProb = logsum(latticeFrame);
+
+% Beam pruning
+threshLogProb = frameLogProb + beamLogProb;
+    
+% Rank pruning               
+if maxRank > 0
+  % How big should our rank pruning histogram be?
+  histSize = 3*length(latticeFrame);
+
+  tmp = latticeFrame(:);
+  min_tmp = min(tmp(tmp > zeroLogProb)) - 1;
+  tmp(tmp <= zeroLogProb) = min_tmp;
+  
+  [hst cdf] = hist(tmp, histSize);
+    
+  % Want to look at the high ranks of the last frame.
+  hst = hst(end:-1:1);
+  cdf = cdf(end:-1:1);
+    
+  hst = cumsum(hst);
+  idx = min(find(hst >= maxRank));
+  rankThresh = cdf(idx);
+      
+  % Only change the threshold if it is stricter than the beam
+  % threshold.
+  threshLogProb = max(threshLogProb, rankThresh);
+    
+  if verb >= 3
+    fprintf('beam thresh = %f, rank thresh = %f, final thresh = %f\n', ...
+        frameLogProb+beamLogProb, rankThresh, threshLogProb);
+  end
+end
+    
+% Which states are active?
+state_idx = find(latticeFrame >= threshLogProb);
+

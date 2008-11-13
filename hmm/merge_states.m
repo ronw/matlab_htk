@@ -34,10 +34,10 @@ if nr == 1 || nc == 1
   idx = idx(:);
 end
 
-if is_valid_hmm(hmm)
-  new_hmm = merge_states_hmm(hmm, idx);
-else
+if is_valid_gmm(hmm)
   new_hmm = merge_states_gmm(hmm, idx);
+else
+  new_hmm = merge_states_hmm(hmm, idx);
 end
 
 
@@ -103,3 +103,8 @@ new_hmm.covars = new_hmm.covars(:,i);
 new_hmm.start_prob(isnan(new_hmm.start_prob)) = -Inf;
 new_hmm.end_prob(isnan(new_hmm.end_prob)) = -Inf;
 new_hmm.transmat(isnan(new_hmm.transmat)) = -Inf;
+
+% make sure transmat and end_prob are normalized properly
+norm = logsum(cat(2, logsum(new_hmm.transmat, 2), new_hmm.end_prob'), 2);
+new_hmm.transmat = new_hmm.transmat - repmat(norm, [1 new_hmm.nstates]);
+new_hmm.end_prob = new_hmm.end_prob - norm';

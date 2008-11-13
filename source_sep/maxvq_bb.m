@@ -55,15 +55,14 @@ z = zeros(nmodels, 1);
     
 for o = 1:nobs
   if verb,  tic;  end
-  data = obs(:,o);
 
   % compute bounds - try each model separately
   B = cell(nmodels, 1);
   for m = 1:nmodels
     B{m} = zeros(nmix(m), 1);  
     for s = 1:gmms(m).nmix
-      dim = find(gmms(m).means(:,s) < data);
-      B{m}(s) = lmvnpdf(obs(dim), gmms(m).means(dim,s), ...
+      dim = find(gmms(m).means(:,s) < obs(:,o));
+      B{m}(s) = lmvnpdf(obs(dim,o), gmms(m).means(dim,s), ...
           gmms(m).covars(dim,s)) + gmms(m).priors(s);
     end
     z(m) = argmin(B{m});
@@ -138,7 +137,9 @@ if nargout > 2
     mask{m} = ones(ndim, nobs);
     for n = 1:nmodels
       if n == m,  continue,  end
-      mask{m} = mask{m} & (gmms(m).means(:,ss{m}) > gmms(n).means(:,ss{n}));
+      mask{m} = mask{m} ...
+          & ((gmms(m).means(:,ss{m}) - obs) ./ sqrt(gmms(m).means(:,ss{m})) ...
+          > (gmms(n).means(:,ss{n}) - obs) ./ sqrt(gmms(n).means(:,ss{n})));
     end
     nm1mask = nm1mask | mask{m};
   end
@@ -148,14 +149,13 @@ end
 
 
 function ll = eval_gmm_max_approx(obs, gmms, z)
-
   prior = gmms(1).priors(z(1));
   mu = gmms(1).means(:, z(1));
   cv = gmms(1).covars(:, z(1));
   for m = 2:length(gmms)
     prior = prior + gmms(m).priors(z(m));
-
-    idx = gmms(m).means(:, z(m)) > mu;
+    idx = (gmms(m).means(:, z(m)) - obs) ./ sqrt(gmms(m).covars(:,z(m))) ... 
+        > (mu - obs) ./ sqrt(cv);
     mu(idx) = gmms(m).means(idx, z(m));
     cv(idx) = gmms(m).covars(idx, z(m));
   end

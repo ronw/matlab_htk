@@ -1,5 +1,5 @@
-function gmm = train_gmm_htk(trdata, nmix, niter, verb, CVPRIOR, mu0);
-% gmmparams = train_gmm_htk(trdata, nmix, niter, verb, cvprior, mu0);
+function gmm = train_gmm_htk(trdata, nmix, niter, verb, CVPRIOR, gmm0);
+% gmmparams = train_gmm_htk(trdata, nmix, niter, verb, cvprior, gmm0);
 %
 % Train a GMM with diagonal covariance using HTK.
 %
@@ -76,16 +76,18 @@ hmm.end_prob = log(0.1);
 % uniform prior
 gmm.priors = log(ones(1, nmix)/nmix);
 gmm.nmix = nmix;
+gmm.covars = ones(ndim, nmix);
 
-if nargin < 6 | numel(mu0) == 1 & mu0 == 1
+if nargin < 6 % | numel(gmm0) == 1 & gmm0 == 1
   gmm.means = kmeans(cat(2, trdata{:}), nmix, niter/2);
-else
-  if size(mu0, 2) == nmix
-    gmm.means = mu0;
+elseif exist('gmm0')
+  if isstruct(gmm0) && gmm0.nmix == nmix
+    gmm = gmm0;
+  elseif size(gmm0, 2) == nmix
+    gmm.means = gmm0;
   end
 end
 
-gmm.covars = ones(ndim, nmix);
 hmm.gmms = gmm;
 
 hmm = train_hmm_htk(trdata, hmm, niter, verb, CVPRIOR);

@@ -1,5 +1,5 @@
-function samples = sample_hmm(hmm)
-% samples = sample_hmm(hmm)
+function [samples state_seq] = sample_hmm(hmm)
+% [samples state_seq] = sample_hmm(hmm)
 %
 % Generate a random sample from the given HMM.
 %
@@ -28,18 +28,25 @@ trans_cdf = cumsum(trans_pdf, 2);
 % Initial state
 p = rand(1);
 s = min(find(sp_cdf >= p));
+state_seq = s;
 samples = sample_from_state(hmm, s);
 
 i = 1;
 while true
   % Select next component or exit.
   p = rand(1);
-  s = min(find(trans_cdf(s,:) >= p));
+  os = s;
+  s = min(find(trans_cdf(os,:) >= p));
+  if isempty(s)
+    s = length(trans_cdf(os,:));
+  end
+
   if s > hmm.nstates
     break
   else
     i = i + 1;
     samples(:,i) = sample_from_state(hmm, s);
+    state_seq(i) = s;
   end
 end
 
@@ -48,10 +55,7 @@ function y = sample_from_state(hmm, s)
 if strcmp(hmm.emission_type, 'GMM')
   y = sample_gmm(hmm.gmms(s), 1);
 elseif strcmp(hmm.emission_type, 'gaussian')
-  mu = hmm.means(:,s);
-  cv = hmm.covars(:,s);
-  ndim = length(mu);
-  y = randn(ndim, 1).*sqrt(cv) + mu;
+  y = sample_gaussian(hmm.means(:,s), hmm.covars(:,s));
 else
   error(['Invalid HMM emission type: ' hmm.emission_type]);
 end

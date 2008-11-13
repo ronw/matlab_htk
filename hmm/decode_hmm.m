@@ -1,4 +1,4 @@
-function [loglik, stateseq, recon, lattice, tb, mllattice] = decode_hmm(hmm, seq, maxRank, beamLogProb, normalize_lattice, verb)
+function [loglik, stateseq, recon, lattice, tb, mllattice] = decode_hmm(hmm, frameLogLike, maxRank, beamLogProb, normalize_lattice, verb)
 % [loglik, stateseq, recon, lattice, tb] = decode_hmm(hmm, seq, rank, beam)
 %
 % Performs Viterbi decode of seq.  Does rank and beam pruning.
@@ -41,10 +41,25 @@ if nargin < 6
   verb = 0;
 end
 
+[nstates, nobs] = size(frameLogLike);
+if nstates ~= hmm.nstates && nstates == size(hmm.means, 1)
+  seq = frameLogLike;
+  ndim = nstates;
+  nstates = hmm.nstates;
+  if strcmp(hmm.emission_type, 'gaussian')
+    frameLogLike = lmvnpdf(seq, hmm.means, hmm.covars);
+  elseif strcmp(hmm.emission_type, 'GMM')
+    for s = 1:hmm.nstates
+      frameLogLike(s,:) = eval_gmm(hmm.gmms(s), seq);
+    end
+  else
+    error('Unknown HMM emission distribution.');
+  end
+end
+
+
 % how big should our rank pruning histogram be?
 histSize = 1000;
-
-[ndim, nobs] = size(seq);
 
 stateseq = zeros(1, nobs);
 tb = zeros(hmm.nstates, nobs);
@@ -101,18 +116,20 @@ for obs = 1:nobs
   avg_nactive = avg_nactive + nactive/nobs;
 
   vitPr = hmm.transmat(s_idx, :)' + repmat(prevLatticeFrame(s_idx), [1, hmm.nstates])';
-  
-  v_idx = find(max(vitPr,[], 2) > zeroLogProb);
-  nv = length(v_idx);
-  currllik = repmat(zeroLogProb, [hmm.nstates, 1]);
-  if strcmp(hmm.emission_type, 'gaussian')
-    currllik(v_idx) = lmvnpdf(seq(:,obs), hmm.means(:, v_idx), ...
-        hmm.covars(:, v_idx));
-  else
-    for s = 1:nv
-      currllik(v_idx(s)) = eval_gmm(hmm.gmms(v_idx(s)), seq(:,obs));
-    end
-  end
+
+  currllik = frameLogLike(:,obs);
+
+%   v_idx = find(max(vitPr,[], 2) > zeroLogProb);
+%   nv = length(v_idx);
+%   currllik = repmat(zeroLogProb, [hmm.nstates, 1]);
+%   if strcmp(hmm.emission_type, 'gaussian')
+%     currllik(v_idx) = lmvnpdf(seq(:,obs), hmm.means(:, v_idx), ...
+%         hmm.covars(:, v_idx));
+%   else
+%     for s = 1:nv
+%       currllik(v_idx(s)) = eval_gmm(hmm.gmms(v_idx(s)), seq(:,obs));
+%     end
+%   end
   
   [prevLatticeFrame tb_tmp] = max(vitPr + repmat(currllik, [1, nactive]), [], 2);
   tb(:,obs) = s_idx(tb_tmp);
