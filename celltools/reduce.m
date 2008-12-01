@@ -31,7 +31,7 @@ if ~isa(fun, 'function_handle')
   error('1st argument must be a function handle')
 end
 
-if nargin(fun) ~= 2
+if nargin(fun) > 0 && nargin(fun) ~= 2 
   error('reduce function must take two arguments.');
 end
 

@@ -27,7 +27,7 @@ if ~isa(reducefun, 'function_handle') || ~isa(mapfun, 'function_handle')
   error('1st two arguments must be function handles.')
 end
 
-if nargin(reducefun) ~= 2
+if nargin(reducefun) > 0 && nargin(reducefun) ~= 2 
   error('reduce function must take two arguments.');
 end
 
