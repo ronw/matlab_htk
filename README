@@ -12,3 +12,6 @@ matlab_htk - functions that interface with the HTK Speech Recognition
 source_sep - implementations of standard algorithms for source
              separation
 celltools  - useful functional programming style functions for cell arrays
+plottools  - Wrappers around basic plotting functions and code for some
+             handy new GUI controls.
+
