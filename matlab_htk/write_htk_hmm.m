@@ -90,6 +90,12 @@ for x = 1:length(hmms)
         zeros(nstates, 1), exp(hmm.transmat), end_prob; ...
         % the last state is also non emitting
         zeros(1, nstates+2)];
+  
+  % Make sure we get epsilon arcs right.
+  if abs(sum(transmat(1,:)) - 1.0) > 1e-5
+    transmat(1,end) = 1.0 - sum(transmat(1,:));
+  end
+      
       
   for n = 1:nstates+2
     fprintf(fid, ' %f', transmat(n,:));

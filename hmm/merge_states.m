@@ -11,6 +11,9 @@ function new_hmm = merge_states(hmm, idx)
 %  - Merge succesive pairs of states:
 %    merge_states(hmm, reshape(1:hmm.nstates, [2, hmm.nstates/2])) 
 %
+% Note that the merging isn't at all correct - it just dumbly takes
+%  the weighted average of the given states.
+%
 % 2008-06-03 ronw@ee.columbia.edu
 
 % Copyright (C) 2008 Ron J. Weiss
