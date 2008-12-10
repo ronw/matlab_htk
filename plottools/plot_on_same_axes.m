@@ -1,11 +1,9 @@
-function y = flatten(x)
-% y = flatten(x)
-%
-% Takes a cell array x that contains nested cell arrays and
-% flattens the contents into a single cell array.
-% E.g. flatten({1, {2, 3, {4}, 5}}) returns {1, 2, 3, 4, 5}
+function plot_on_same_axes(varargin)
+% plot_on_same_axes(data1, data2, ...)
+% 
+% Plots all of data1, data2, ...  on the same axis.
 
-% Copyright (C) 2007 Ron J. Weiss
+% Copyright (C) 2008 Ron J. Weiss (ronw@ee.columbia.edu)
 %
 % This program is free software: you can redistribute it and/or modify
 % it under the terms of the GNU General Public License as published by
@@ -20,20 +18,17 @@ function y = flatten(x)
 % You should have received a copy of the GNU General Public License
 % along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-if ~iscell(x)
-  error('flatten only works on cell arrays.');
-end
+plot_args = {};
+for n = 1:length(varargin)
+  curr = varargin{n};
+  if ~iscell(curr)
+    curr = {curr};
+  end
 
-y = inner_flatten(x);
-
-
-function y = inner_flatten(x)
-if ~iscell(x)
-  y = {x};
-else
-  y = {};
-  for n = 1:length(x)
-    tmp = inner_flatten(x{n});
-    y = {y{:} tmp{:}};
+  for m = 1:length(curr)
+    plot_args = {plot_args{:} 1:length(curr{m}) curr{m}};
   end
 end
+
+plot(plot_args{:});
+grid on

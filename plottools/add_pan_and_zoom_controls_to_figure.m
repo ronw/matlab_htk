@@ -1,8 +1,15 @@
-function make_figure_scrollable(h_fig, all_axes)
-% make_figure_scrollable(fig_handle, axes_to_scroll)
+function add_pan_and_zoom_controls_to_figure(h_fig, all_axes)
+% add_pan_and_zoom_controls_to_figure(fig_handle, axes)
 %
-% Adds scrollbars to the given figure window that let you zoom, pan,
-% and change the color limits of all subplots at once.
+% Adds controls to the given figure window that let you pan and zoom
+% the vertical and horizontal axes and change the color limits of all
+% of the given axes at once.  If no axes are specified, the controls
+% apply to all axes in the given figure.  Separate controls are added
+% for each of the x, y, and color axes.
+%
+% If the limits are consistent across all of the specified axes
+% scrollbar is added at the edge of the figure.  Otherwise simple
+% pan and zoom buttons are used.
 
 % Copyright (C) 2008 Ron J. Weiss (ronw@ee.columbia.edu)
 %
@@ -20,6 +27,13 @@ function make_figure_scrollable(h_fig, all_axes)
 % along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 if nargin < 1;  h_fig = gcf;  end
+
+% Axes are specified with functions to allow controls to behave
+% dynamically.  I.e. if a new subplot is added after this function is
+% called, the controls can operate on the new subplot as well.  Note
+% that this will lead to inconsistent scrollbar behavior if the new
+% subplot is not aligned with the subplots present at the time this
+% function was called.
 if nargin < 2
   xaxes_fun = @() get_axes(h_fig, 'axes');
   all_axes = xaxes_fun();
@@ -63,21 +77,35 @@ if length(all_images) > 0
   end
   sz_x = max(cellfun(@(x) size(x, 2), cd));
   sz_y = max(cellfun(@(x) size(x, 1), cd));
+
+  for n = 1:length(cd)
+    cd{n} = cd{n}(~isinf(cd{n}) & ~isnan(cd{n}));
+    if isempty(cd{n})
+      cd{n} = 0;
+    end
+  end
   clim_min = min(cellfun(@(x) min(x(:)), cd));
   clim_max = max(cellfun(@(x) max(x(:)), cd));
 
   original_xlim = [min(1, current_xlim(1)) max(sz_x, current_xlim(2))];
   original_ylim = [min(1, current_ylim(1)) max(sz_y, current_ylim(2))];
   original_clim = [clim_min clim_max];
+
+  % Don't bother adding colorbar controls if the image is all
+  % zeros. (Matlab sets the CLim of such image [-1 1] for some
+  % reason, but there is no information there).
+  if all(original_clim == 0)
+    align_c_axes = false;
+  end
 else
   yaxes_fun = xaxes_fun;
   align_c_axes = false;
   original_clim = [0 1];
   if length(all_axes) > 1
-    min_x = max(cellfun(@(x) x(1), get(all_axes, 'XLim')));
+    min_x = min(cellfun(@(x) x(1), get(all_axes, 'XLim')));
     max_x = max(cellfun(@(x) x(2), get(all_axes, 'XLim')));
     original_xlim = [min_x max_x];
-    min_y = max(cellfun(@(x) x(1), get(all_axes, 'YLim')));
+    min_y = min(cellfun(@(x) x(1), get(all_axes, 'YLim')));
     max_y = max(cellfun(@(x) x(2), get(all_axes, 'YLim')));
     original_ylim = [min_y max_y];
   else
@@ -89,16 +117,19 @@ else
   current_clim = original_clim;
 end
 
-setup_controls(h_fig, 'XLim', original_xlim, current_xlim, ...
+setup_axis_controls(h_fig, 'XLim', original_xlim, current_xlim, ...
     xaxes_fun, align_x_axes);
-setup_controls(h_fig, 'YLim', original_ylim, current_ylim, ...
+setup_axis_controls(h_fig, 'YLim', original_ylim, current_ylim, ...
     yaxes_fun, align_y_axes);
-setup_controls(h_fig, 'CLim', original_clim, current_clim, ...
+setup_axis_controls(h_fig, 'CLim', original_clim, current_clim, ...
     yaxes_fun, align_c_axes);
 
 % Link axes so that standard zoom/pan controls apply to all axes (but
 % not colorbars).
 %linkaxes(all_axes, 'xy')
+
+% Make sure toolbar is still displayed.
+set(h_fig, 'Toolbar', 'figure')
 
 
 function y = are_limits_consistent(lim)
@@ -108,7 +139,8 @@ if iscell(lim) && any(cat(2, lim{:}) ~= repmat(lim{1}, [1 length(lim)]))
 end
 
 
-function setup_controls(h_fig, property, orig_lim, curr_lim, axes_fun, align_axes)
+function setup_axis_controls(h_fig, property, orig_lim, curr_lim, axes_fun, align_axes)
+
 if align_axes
   % Add a scrollbar control for the given property of the given axes.
   switch lower(property(1))

@@ -1,11 +1,13 @@
-function y = flatten(x)
-% y = flatten(x)
+function C = czip(varargin)
+% C = czip(cell1, cell2, cell3, ...)
 %
-% Takes a cell array x that contains nested cell arrays and
-% flattens the contents into a single cell array.
-% E.g. flatten({1, {2, 3, {4}, 5}}) returns {1, 2, 3, 4, 5}
+% Like Python's zip function. Returns a cell array C containing a list of
+% cell arrays such that:
+%  C{i} = {cell1{i}, cell2{i}, cell3{i}, ...}
+%
+% C is truncated to the length of the smallest of the input arrays.
 
-% Copyright (C) 2007 Ron J. Weiss
+% Copyright (C) 2008 Ron J. Weiss
 %
 % This program is free software: you can redistribute it and/or modify
 % it under the terms of the GNU General Public License as published by
@@ -20,20 +22,11 @@ function y = flatten(x)
 % You should have received a copy of the GNU General Public License
 % along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-if ~iscell(x)
-  error('flatten only works on cell arrays.');
-end
-
-y = inner_flatten(x);
-
-
-function y = inner_flatten(x)
-if ~iscell(x)
-  y = {x};
-else
-  y = {};
-  for n = 1:length(x)
-    tmp = inner_flatten(x{n});
-    y = {y{:} tmp{:}};
+len = mapreduce(@length, @(x,y) min(x,y), varargin);
+C = cell(nargin, 1);
+for l = 1:len
+  c{l} = {};
+  for n = 1:nargin
+    C{l}{n} = varargin{n}{l};
   end
 end

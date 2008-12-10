@@ -37,7 +37,7 @@ end
 
 y = feval(mapfun, C{1});
 if nargin == 4
-  y = fun(initial, y);
+  y = reducefun(initial, y);
 end
 
 for n = 2:numel(C),

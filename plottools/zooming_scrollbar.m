@@ -265,7 +265,6 @@ horiz_flag = ud(7);
 function zooming_scrollbar_callback(source, eventdata, h_ud, cb)
 [h_fig h_widget h_barfg h_axis min_val max_val horiz_flag] ...
     = unpack_userdata(h_ud);
-
 % How and where did we click?
 pt = get(h_ud, 'CurrentPoint');
 if horiz_flag
@@ -307,13 +306,6 @@ function reset_mouse_functions(source, eventdata, h_ud, cb, click_pt, ...
 set(h_fig, 'WindowButtonMotionFcn', []);
 set(h_fig, 'WindowButtonUpFcn', []);  
 set(h_barfg, 'BorderType', 'beveledout');
-pt2 = get(h_ud, 'CurrentPoint');
-if horiz_flag
-  click_pt2 = pt2(1,1);
-else
-  click_pt2 = pt2(1,2);
-end
-% fprintf('  Got reset at: %f\n', click_pt2)
 
 
 
@@ -323,28 +315,28 @@ function mouse_motion_callback(source, eventdata, h_ud, cb, click_pt, ...
     = unpack_userdata(h_ud);
 [sc_min sc_max] = get_position(h_ud);
 
-% Where is the mouse now?
-pt2 = get(h_ud, 'CurrentPoint');
+pt = get(h_ud, 'CurrentPoint');
 if horiz_flag
-  click_pt2 = pt2(1,1);
+  curr_pt = pt(1,1);
 else
-  click_pt2 = pt2(1,2);
+  curr_pt = pt(1,2);
 end
-click_pt2 = max(min(1.0, click_pt2), 0.0);
-% fprintf('  Got update at: %f\n', click_pt2)
+% Don't go past the edge of the scrollbar.
+curr_pt = max(min(1.0, curr_pt), 0.0);
+% fprintf('  Got update at: %f\n', curr_pt)
 
 center = sc_min + (sc_max - sc_min)/2;
 if strcmpi(click_type, 'normal')
   % If left click, drag the center of the range to a new value.
-  shift = click_pt2 - center;
+  shift = curr_pt - center;
   sc_max = sc_max + shift;
   sc_min = sc_min + shift;
 elseif strcmpi(click_type, 'alt')
   % If right click, drag one of the limits to a new value.
   if click_pt > center
-    sc_max = click_pt2;
+    sc_max = curr_pt;
   else
-    sc_min = click_pt2;
+    sc_min = curr_pt;
   end
 end
 zooming_scrollbar_update(h_ud, cb, sc_min, sc_max);
@@ -352,11 +344,10 @@ zooming_scrollbar_update(h_ud, cb, sc_min, sc_max);
 
 
 function zooming_scrollbar_update(h_ud, cb, sc_min, sc_max)
-if sc_max < sc_min
-  %warning('zooming_scrollbar: BUG!');
+% Only update if we haven't scrolled too far.
+if sc_max - sc_min < 0.01
   return
 end
-%FIXME
 if sc_max > 1.0
   sc_min = max(sc_min - (sc_max - 1.0), 0);
   sc_max = 1.0;
