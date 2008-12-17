@@ -17,8 +17,6 @@ function plotall(varargin)
 %                                 data before plotting
 % 'order'                  ('r'): ordering of subplots ('r' for row-major order
 %                                 or 'c' for column-major order)
-% 'plot_fun'  (@plot_or_imagesc): function to use for plotting each element
-%                                 of data
 % 'pub'                  (false): If true, try to make nicer looking
 %                                 plots suitable for publication
 % 'subplot'              ([n 1]): subplot arrangement
@@ -32,6 +30,8 @@ function plotall(varargin)
 %
 % Supported per-subplot properties (default value):
 % 'axis'                  ('xy'): set axis appearance or scaling
+% 'plot_fun'  (@plot_or_imagesc): function to use for plotting each element
+%                                 of data
 % 'title'        ({'1','2',...}): titles for each matrix in data
 % 'xlabel'                  (''): x axis label
 % 'ylabel'                  (''): y axis label
@@ -130,7 +130,7 @@ props = struct();
     'ylabel',   '');
 other_properties = varargout;
 
-per_subplot_fields = {'axis', 'title', 'xlabel', 'ylabel'};
+per_subplot_fields = {'axis', 'plot_fun', 'title', 'xlabel', 'ylabel'};
 props = make_properties_the_correct_length(props, per_subplot_fields, ndat);
 
 % Set other properties.
@@ -226,7 +226,7 @@ for x = plots
   
   curr_axes = properties.axes(x);
   axes(curr_axes)
-  feval(properties.plot_fun, d);
+  feval(properties.plot_fun{x}, d);
 
   all_axes = [all_axes curr_axes];
   if length(size(d)) == 2

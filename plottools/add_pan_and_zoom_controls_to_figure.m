@@ -44,6 +44,10 @@ yaxes_fun = @() get_axes(feval(xaxes_fun), 'image');
 
 all_image_axes = get_axes(all_axes, 'image');
 all_images = findobj(all_axes, 'Type', 'image', 'Tag', '');
+if isempty(all_image_axes)
+  yaxes_fun = xaxes_fun;
+  all_image_axes = all_axes;
+end
 
 % Check to see if xlim, ylim, and clim are consistent across all axes.
 align_x_axes = are_limits_consistent(get(all_axes, 'XLim'));
@@ -54,7 +58,7 @@ align_c_axes = are_limits_consistent(get(all_image_axes, 'CLim'));
 % The parsing is kind of nasty because images and 1D plots need to be
 % handled differently and because the output type of get(axes) is
 % different for scalar axes and array axes.
-if length(all_images) > 0
+if ~isempty(all_images)
   current_xlim = get(all_axes, 'XLim');
   if iscell(current_xlim)
     current_xlim = cat(1, current_xlim{:});
@@ -98,7 +102,6 @@ if length(all_images) > 0
     align_c_axes = false;
   end
 else
-  yaxes_fun = xaxes_fun;
   align_c_axes = false;
   original_clim = [0 1];
   if length(all_axes) > 1
@@ -116,6 +119,16 @@ else
   current_ylim = original_ylim;
   current_clim = original_clim;
 end
+
+% Make sure the reset button resets the limits to the extremes
+% (i.e. make sure it works as expected if current_lim falls outside
+% of original_lim).
+original_xlim(1) = min(original_xlim(1), current_xlim(1));
+original_xlim(2) = max(original_xlim(2), current_xlim(2));
+original_ylim(1) = min(original_ylim(1), current_ylim(1));
+original_ylim(2) = max(original_ylim(2), current_ylim(2));
+original_clim(1) = min(original_clim(1), current_clim(1));
+original_clim(2) = max(original_clim(2), current_clim(2));
 
 setup_axis_controls(h_fig, 'XLim', original_xlim, current_xlim, ...
     xaxes_fun, align_x_axes);

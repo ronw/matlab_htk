@@ -23,9 +23,8 @@ function C = czip(varargin)
 % along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 len = mapreduce(@length, @(x,y) min(x,y), varargin);
-C = cell(nargin, 1);
+C = cell(len, 1);
 for l = 1:len
-  c{l} = {};
   for n = 1:nargin
     C{l}{n} = varargin{n}{l};
   end
