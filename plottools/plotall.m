@@ -80,7 +80,7 @@ clf
 colormap(properties.colormap)
 
 properties = initialize_subplots(ndat, properties);
-plot_data(data, properties, 1);
+plot_page(data, properties, 1)
 
 
 
@@ -177,11 +177,11 @@ end
 
 function props = initialize_subplots(ndat, props)
 nplot = prod(props.subplot);
-all_axes = zeros(nplot, 1);
+subplots = cell(1, nplot);
 for x = 1:nplot
-  all_axes(x) = subplot(props.subplot(1), props.subplot(2), x);
+  subplots{x} = {props.subplot(1), props.subplot(2), x};
 end
-props.all_axes = all_axes;
+props.subplots = subplots;
 
 if props.order == 'r'
   plot_order = 1:nplot;
@@ -195,26 +195,18 @@ end
 
 % Only nplot plots can be shown at once.
 plot_num = plot_order(mod([1:ndat] - 1, nplot) + 1);
-props.axes = all_axes(plot_num);
+props.subplots = subplots(plot_num);
 
 
 
-function plot_data(data, properties, curr_page)
+function plot_page(data, properties, curr_page)
 ndat = length(data);
 nplot = min(ndat, prod(properties.subplot));
 npages = ceil(ndat/nplot);
 plots = (curr_page-1)*nplot + [1:nplot];
 
-
-% Pass 0: Hide all subplots.  The ones we use are made visible
-% automatically.
-for ax = properties.all_axes(:)'
-  set(ax, 'Visible', 'off')
-  children = get(ax, 'Children');
-  set(children, 'Visible', 'off')
-end
-
 % Pass 1: plot everything and align axes.
+clf
 all_axes = [];
 all_image_axes = [];
 for x = plots
@@ -224,8 +216,7 @@ for x = plots
 
   d = squeeze(feval(properties.fun, data{x}));
   
-  curr_axes = properties.axes(x);
-  axes(curr_axes)
+  curr_axes = subplot(properties.subplots{x}{:});
   feval(properties.plot_fun{x}, d);
 
   all_axes = [all_axes curr_axes];
@@ -246,10 +237,10 @@ end
 
 % Pass 2: set specified axis properties.
 for x = plots
-  if x < 1 || x > length(data)
+  if x < 1 || x > ndat;
     continue;
   end
-  curr_axes = properties.axes(x);
+  curr_axes = all_axes(x - plots(1) + 1);
   axes(curr_axes)
 
   axis(properties.axis{x})
@@ -302,7 +293,7 @@ if ~properties.pub
   delete(h)
 
   if npages > 1
-    add_pager_buttons(data, properties, curr_page)
+    add_pager_controls(data, properties, curr_page)
   end
 
   add_pan_and_zoom_controls_to_figure(properties.figure, all_axes);
@@ -311,7 +302,7 @@ end
 
 
 
-function add_pager_buttons(data, properties, curr_page)
+function add_pager_controls(data, properties, curr_page)
 ndat = length(data);
 nplot = min(ndat, prod(properties.subplot));
 npages = ceil(ndat/nplot);
@@ -325,29 +316,53 @@ end
 if curr_page == npages
   enable_next_button = 'off';
 else
-  enable_next_button = 'on';  
+  enable_next_button = 'on';
 end
 
-pos = [20 20 40 20];
-uicontrol('Style', 'pushbutton', 'String', 'First', 'Position', pos, ...
-    'Callback', @(a,b) plot_data(data, properties, 1));
+h_panel = uipanel('Units', 'normalized', 'Position', [0 1.0 1.0 1.0], ...
+    'Tag', 'plot_pages_controls');
+pos = [0 0 40 20];
+uicontrol('Parent', h_panel, 'Style', 'pushbutton', 'String', 'First', ...
+    'Units', 'pixels', 'Position', pos, ...
+    'Callback', @(a,b) plot_page(data, properties, 1));
 pos(1) = pos(1) + pos(3);
-uicontrol('Style', 'pushbutton', 'String', 'Prev', 'Position', pos, ...
-    'Callback', @(a,b) plot_data(data, properties, curr_page - 1), ...
+uicontrol('Parent', h_panel, 'Style', 'pushbutton', 'String', 'Prev', ...
+    'Units', 'pixels', 'Position', pos, ...
+    'Callback', @(a,b) plot_page(data, properties, curr_page - 1), ...
     'Enable', enable_prev_button);
 pos(1) = pos(1) + pos(3);
 pos(3) = 50;
-uicontrol('Style', 'edit', 'String', curr_page, 'Position', pos, ...
-    'Callback', @(a,b) plot_data(data, properties, ...
+uicontrol('Parent', h_panel, 'Style', 'edit', 'String', curr_page, ...
+    'Units', 'pixels', 'Position', pos, ...
+    'Callback', @(a,b) plot_page(data, properties, ...
     max(min(str2num(get(a, 'String')), npages), 1)));
 pos(1) = pos(1) + pos(3);
-uicontrol('Style', 'text', 'String', sprintf(' / %d', npages), ...
+uicontrol('Parent', h_panel, 'Style', 'text', 'String', sprintf(' / %d', npages), ...
     'Position', pos);
 pos(1) = pos(1) + pos(3);
 pos(3) = 40;
-uicontrol('Style', 'pushbutton', 'String', 'Next', 'Position', pos, ...
-    'Callback', @(a,b) plot_data(data, properties, curr_page + 1), ...
+uicontrol('Parent', h_panel, 'Style', 'pushbutton', 'String', 'Next', ...
+    'Units', 'pixels', 'Position', pos, ...
+    'Callback', @(a,b) plot_page(data, properties, curr_page + 1), ...
     'Enable', enable_next_button);
 pos(1) = pos(1) + pos(3);
-uicontrol('Style', 'pushbutton', 'String', 'Last', 'Position', pos, ...
-    'Callback', @(a,b) plot_data(data, properties, npages));
+uicontrol('Parent', h_panel, 'Style', 'pushbutton', 'String', 'Last', ...
+    'Units', 'pixels', 'Position', pos, ...
+    'Callback', @(a,b) plot_page(data, properties, npages));
+
+width_px = pos(1) + pos(3);
+height_px = pos(4);
+position_pager_controls(h_panel, width_px, height_px)
+set(h_panel, 'ResizeFcn', ...
+    @(a,b) position_pager_controls(h_panel, width_px, height_px))
+
+
+
+function position_pager_controls(h_panel, width_px, height_px)
+set(h_panel, 'Units', 'pixels', 'Position', [0 0 width_px height_px])
+set(h_panel, 'Units', 'normalized')
+pos = get(h_panel, 'Position');
+pos(1) = 0;
+pos(2) = 1.0 - pos(4);
+set(h_panel, 'Position', pos);
+
