@@ -76,7 +76,9 @@ catch
   % Figure didn't exist, need to create it.
   figure(properties.figure)
 end
-clf
+if properties.pub
+  clf
+end
 colormap(properties.colormap)
 
 properties = initialize_subplots(ndat, properties);
@@ -206,7 +208,9 @@ npages = ceil(ndat/nplot);
 plots = (curr_page-1)*nplot + [1:nplot];
 
 % Pass 1: plot everything and align axes.
-clf
+if properties.pub
+  clf
+end
 all_axes = [];
 all_image_axes = [];
 for x = plots
@@ -288,9 +292,14 @@ for x = plots
 end
 
 if ~properties.pub
-  % Remove all left over uicontrols before we create new ones.
+  % Remove all left over pager and pan and zoom controls before we
+  % create new ones.
   h = findobj(gcf, 'Type', 'uicontrol', '-or', 'type', 'uipanel');
-  delete(h)
+  h_del = findobj(h, 'Tag', mfilename);
+  delete(h_del)
+  h = findobj(gcf, 'Type', 'uicontrol', '-or', 'type', 'uipanel');
+  h_del = findobj(h, 'Tag', 'add_pan_and_zoom_controls_to_figure');
+  delete(h_del)
 
   if npages > 1
     add_pager_controls(data, properties, curr_page)
@@ -320,19 +329,22 @@ else
 end
 
 h_panel = uipanel('Units', 'normalized', 'Position', [0 1.0 1.0 1.0], ...
-    'Tag', 'plot_pages_controls');
+    'Tag', mfilename);
 pos = [0 0 40 20];
 uicontrol('Parent', h_panel, 'Style', 'pushbutton', 'String', 'First', ...
+    'Tag', mfilename, ...
     'Units', 'pixels', 'Position', pos, ...
     'Callback', @(a,b) plot_page(data, properties, 1));
 pos(1) = pos(1) + pos(3);
 uicontrol('Parent', h_panel, 'Style', 'pushbutton', 'String', 'Prev', ...
+    'Tag', mfilename, ...
     'Units', 'pixels', 'Position', pos, ...
     'Callback', @(a,b) plot_page(data, properties, curr_page - 1), ...
     'Enable', enable_prev_button);
 pos(1) = pos(1) + pos(3);
 pos(3) = 50;
 uicontrol('Parent', h_panel, 'Style', 'edit', 'String', curr_page, ...
+    'Tag', mfilename, ...
     'Units', 'pixels', 'Position', pos, ...
     'Callback', @(a,b) plot_page(data, properties, ...
     max(min(str2num(get(a, 'String')), npages), 1)));
@@ -342,11 +354,13 @@ uicontrol('Parent', h_panel, 'Style', 'text', 'String', sprintf(' / %d', npages)
 pos(1) = pos(1) + pos(3);
 pos(3) = 40;
 uicontrol('Parent', h_panel, 'Style', 'pushbutton', 'String', 'Next', ...
+    'Tag', mfilename, ...
     'Units', 'pixels', 'Position', pos, ...
     'Callback', @(a,b) plot_page(data, properties, curr_page + 1), ...
     'Enable', enable_next_button);
 pos(1) = pos(1) + pos(3);
 uicontrol('Parent', h_panel, 'Style', 'pushbutton', 'String', 'Last', ...
+    'Tag', mfilename, ...
     'Units', 'pixels', 'Position', pos, ...
     'Callback', @(a,b) plot_page(data, properties, npages));
 
