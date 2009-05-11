@@ -35,6 +35,7 @@ function plotall(varargin)
 % 'title'        ({'1','2',...}): titles for each matrix in data
 % 'xlabel'                  (''): x axis label
 % 'ylabel'                  (''): y axis label
+% 'zlabel'                  (''): z axis label
 %
 % Other valid per-subplot axis properties and values (e.g. 'CLim',
 % 'XLim', 'XTick') can be passed in as well.  
@@ -74,8 +75,10 @@ try
   set(0, 'CurrentFigure', properties.figure)
 catch
   % Figure didn't exist, need to create it.
+  warning('Figure didn''t exist, need to create it.')
   figure(properties.figure)
 end
+
 if properties.pub
   clf
 end
@@ -115,7 +118,7 @@ ndat = length(data);
 props = struct();
 [props.align, props.axis, props.colorbar, props.colormap, props.figure, ...
       props.fun, props.order, props.plot_fun, props.pub, props.subplot, ...
-      props.title, props.xlabel, props.ylabel, varargout] = ...
+      props.title, props.xlabel, props.ylabel, props.zlabel, varargout] = ...
     process_options(option_args, ...
     'align',    'xyc', ...
     'axis',     'xy', ...
@@ -129,10 +132,12 @@ props = struct();
     'subplot',  [ndat 1], ...
     'title',    cellstr(num2str([1:ndat]')), ...
     'xlabel',   '', ...
-    'ylabel',   '');
+    'ylabel',   '', ...
+    'zlabel',   '');
 other_properties = varargout;
 
-per_subplot_fields = {'axis', 'plot_fun', 'title', 'xlabel', 'ylabel'};
+per_subplot_fields = {'axis', 'plot_fun', 'title', 'xlabel', 'ylabel', ...
+      'zlabel'};
 props = make_properties_the_correct_length(props, per_subplot_fields, ndat);
 
 % Set other properties.
@@ -208,9 +213,8 @@ npages = ceil(ndat/nplot);
 plots = (curr_page-1)*nplot + [1:nplot];
 
 % Pass 1: plot everything and align axes.
-if properties.pub
-  clf
-end
+clf
+
 all_axes = [];
 all_image_axes = [];
 for x = plots
@@ -251,6 +255,7 @@ for x = plots
   title(properties.title{x});
   xlabel(properties.xlabel{x});
   ylabel(properties.ylabel{x});
+  zlabel(properties.zlabel{x});
 
   other_props = fieldnames(properties.other{x});
   for y = 1:length(other_props)
@@ -274,8 +279,8 @@ for x = plots
   
   if properties.pub 
     if x <= nplot - properties.subplot(2)
-      xlabel('')
-      set(curr_axes, 'XTickLabel', [])
+      xlabel('  ')
+      %set(curr_axes, 'XTickLabel', ' ')
     end
     
     if properties.subplot(1) == 1 ...
@@ -307,7 +312,7 @@ if ~properties.pub
 
   add_pan_and_zoom_controls_to_figure(properties.figure, all_axes);
 end
-%subplot 111
+subplot 111
 
 
 
