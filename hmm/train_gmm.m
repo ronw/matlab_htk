@@ -1,7 +1,7 @@
 function gmm = train_gmm(trdata, nmix, niter, verb, CVPRIOR, mu0);
 % gmmparams = train_gmm(trdata, nmix, niter, verb, cvprior, mu0);
 %
-% Train a GMM with diagonal covariance using HTK.
+% Train a GMM with diagonal covariance.
 %
 % Inputs:
 % trdata - training data (cell array of training sequences, each
@@ -54,7 +54,8 @@ else
 end
 
 ndim = size(trdata{1}, 1);
-gmm.covars = ones(ndim, nmix);
+%gmm.covars = ones(ndim, nmix);
+gmm.covars(:,1:nmix) = repmat(var(trdata{1}')', [1 nmix]);
 
 
 % sufficient statistics
@@ -62,10 +63,10 @@ norm = zeros(size(gmm.priors));
 means = zeros(size(gmm.means));
 covars = zeros(size(gmm.covars));
 
-last_loglik = -Inf;
+last_loglik = 0;
 for iter = 1:niter
   % E-step
-  loglik = -Inf;
+  loglik = 0;
   norm(:) = 0;
   means(:) = 0;
   covars(:) = 0;
@@ -73,7 +74,7 @@ for iter = 1:niter
     curr_data = trdata{n};
     [ll, posteriors] = eval_gmm(gmm, curr_data);
 
-    loglik = logsum([loglik logsum(ll)]);
+    loglik = loglik + sum(ll);
     
     norm = norm + sum(posteriors, 2)';
     means = means + curr_data * posteriors';

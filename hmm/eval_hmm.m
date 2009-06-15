@@ -100,6 +100,10 @@ alpha(alpha <= zeroLogProb) = -Inf;
 % Don't forget hmm.end_prob
 nextLatticeFrame = hmm.end_prob(:) + frameLogLike(:,end);
 loglik = logsum(prevLatticeFrame + nextLatticeFrame);
+if isinf(loglik) || isnan(loglik)
+  nextLatticeFrame = frameLogLike(:,end);
+  loglik = logsum(prevLatticeFrame + nextLatticeFrame);
+end
 
 if verb
   fprintf('eval_hmm: log likelihood = %f\n', loglik)
@@ -127,7 +131,8 @@ for obs = nobs-1:-1:1
   % bother computing backward probability if alpha*beta is more than a
   % certain distance from the total log likelihood.
   idx = prune_states(nextLatticeFrame + alpha(:,obs+1), 0, -20, verb);
-  
+  %idx = prune_states(nextLatticeFrame + alpha(:,obs+1), 10, -Inf, verb);  
+
   pr = hmm.transmat(:,idx) + repmat(nextLatticeFrame(idx) ...
       + frameLogLike(idx,obs+1), [1, hmm.nstates])';
   nextLatticeFrame = logsum(pr, 2);
@@ -149,13 +154,12 @@ lattice = exp(gamma - repmat(logsum(gamma, 1), [hmm.nstates 1]));
 function [state_idx thresh] = prune_states(latticeFrame, ...
     maxRank, beamLogProb, verb)
 zeroLogProb = -1e200;
-
 frameLogProb = logsum(latticeFrame);
 
 % Beam pruning
 threshLogProb = frameLogProb + beamLogProb;
-    
-% Rank pruning               
+
+% Rank pruning
 if maxRank > 0
   % How big should our rank pruning histogram be?
   histSize = 3*length(latticeFrame);
