@@ -14,3 +14,4 @@ if S.type == '{}'
 else
   varargout{1} = B;
 end
+

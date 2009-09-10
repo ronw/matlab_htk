@@ -3,8 +3,8 @@ function Y = lazymap(fun, C)
 %
 % Behaves like map/cellfun, but with lazy evaluation.  Returns an
 % object that behaves like a cell array with same dimensions as C.
-% Whenever an element in y is dereferenced (e.g. y(10) or y{1:end})
-% the function fun is applied to the corresponding cells of C and the
+% Whenever an element in y is referenced (e.g. y(10) or y{1:end}) the
+% function fun is applied to the corresponding cells of C and the
 % result is returned.
 %
 % Example:

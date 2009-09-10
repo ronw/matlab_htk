@@ -28,11 +28,8 @@ if ~iscell(C)
   error('2nd argument must be a cell array.')
 end
 
-
-bool = cellfun(fun, C, 'UniformOutput', 1);
-
-if ~islogical(bool),
-  error('filter function must return a logical array');
+bool = zeros(size(C));
+for n = 1:numel(C)
+  bool(n) = feval(fun, C{n});
 end
-
 Y = C(bool);
