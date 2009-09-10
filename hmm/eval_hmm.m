@@ -98,7 +98,9 @@ end
 alpha(alpha <= zeroLogProb) = -Inf;
 
 % Don't forget hmm.end_prob
-nextLatticeFrame = hmm.end_prob(:) + frameLogLike(:,end);
+% This double counts frameLogLike(:,end)!!
+%nextLatticeFrame = hmm.end_prob(:) + frameLogLike(:,end);
+nextLatticeFrame = hmm.end_prob(:);
 loglik = logsum(prevLatticeFrame + nextLatticeFrame);
 if isinf(loglik) || isnan(loglik)
   nextLatticeFrame = frameLogLike(:,end);

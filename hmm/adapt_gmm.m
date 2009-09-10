@@ -113,7 +113,7 @@ for iter = 1:niter
   last_loglik = loglik;
   
   % M-step
-  % based on Huang, Acero, Hon, "Spoken Language Processing", p. 453 - 454
+  % based on Huang, Acero, Hon, "Spoken Language Processing", p. 443 - 445
   npriors = (ppriors - 1 + norm) ./ sum(ppriors - 1 + norm);
   npriors(npriors < 0) = 0;
   gmm.priors = log(npriors);

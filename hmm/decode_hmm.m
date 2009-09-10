@@ -67,7 +67,11 @@ tb = zeros(hmm.nstates, nobs);
 if nargout > 3
   lattice = repmat(zeroLogProb, [hmm.nstates, nobs]);
 end
+% FIXME - there is a bug here in how the first frame is handled -
+% an extra transition probability from the non-existant 0th frame
+% to the 1st frame is added into lattice...
 prevLatticeFrame = hmm.start_prob(:);
+%prevLatticeFrame = hmm.start_prob(:) + frameLogLike(:,1);
 tb = zeros(hmm.nstates, nobs);
 
 % fill in the lattice...
@@ -132,6 +136,9 @@ for obs = 1:nobs
 %   end
   
   [prevLatticeFrame tb_tmp] = max(vitPr + repmat(currllik, [1, nactive]), [], 2);
+  % This is equivalent to the above?
+  %[prevLatticeFrame tb_tmp] = max(vitPr, [], 2);
+  %prevLatticeFrame = prevLatticeFrame + currllik;
   tb(:,obs) = s_idx(tb_tmp);
   
   if nargout > 3
