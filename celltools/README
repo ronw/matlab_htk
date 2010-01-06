@@ -1,5 +1,0 @@
-This package contains a set of standard functional programming tools
-that can be used on cell arrays.  Contains implementations of map,
-reduce, filter (called cfilter so as not to conflict with the filter()
-function in the Signal Processing Toolbox), and lazymap which has the
-same semantics as map but uses lazy evaluation.
