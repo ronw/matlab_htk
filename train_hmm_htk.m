@@ -65,7 +65,7 @@ nseq = length(trdata);
 [ndim, nobs(1)] = size(trdata{1});
 
 % HInit support is currently broken
-use_hinit = 0;
+use_hinit = 1;
 
 
 % default hmm parameters
@@ -101,10 +101,13 @@ if strcmp(hmm.emission_type, 'gaussian')
 end
 if strcmp(hmm.emission_type, 'GMM') 
   if ~isfield(hmm, 'gmms')
-    hmm.gmms = cell(nstates);
+      for x=1:nstates
+          hmm.gmms(x)=struct();
+      end
+    %hmm.gmms = cell(nstates);
   end
   if ~isfield(hmm.gmms(1), 'nmix')
-    nmix = 3;
+    nmix = nstates;
     for x = 1:nstates
       hmm.gmms(x).nmix = nmix;
     end

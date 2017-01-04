@@ -25,7 +25,7 @@ function hmms = read_htk_hmm(filename)
 % Read the M-file into a cell array of strings: 
 [fid, message] = fopen(filename, 'rt');
 warning(message)
-file = textscan(fid, '%s', 'delimiter', '\n', 'whitespace', '', 'bufSize', 16000);
+file = textscan(fid, '%s', 'delimiter', '\n', 'whitespace', '');%'bufSize', 16000
 fclose(fid);
 
 file = file{1};
