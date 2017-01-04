@@ -107,7 +107,7 @@ if strcmp(hmm.emission_type, 'GMM')
     %hmm.gmms = cell(nstates);
   end
   if ~isfield(hmm.gmms(1), 'nmix')
-    nmix = 3;
+    nmix = nstates;
     for x = 1:nstates
       hmm.gmms(x).nmix = nmix;
     end
